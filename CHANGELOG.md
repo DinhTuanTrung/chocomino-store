@@ -1,5 +1,15 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.7.0] - 2026-10-22 (Tự Động Hủy Đơn QR 15 Phút, Ẩn Danh PII 90 Ngày & Vercel Cron)
+
+### Added
+- **API Xử Lý Tác Vụ Định Kỳ (`/api/cron/cleanup`)**:
+  - Tự động gọi hàm Stored Procedure `cancel_expired_qr_orders()` giải phóng tồn kho về lại biến thể và chuyển trạng thái đơn `cancelled` đối với các đơn hàng VietQR chưa thanh toán quá 15 phút (Q-14 / Quyết định D1).
+  - Tự động gọi hàm Stored Procedure `anonymize_expired_customer_data()` mã hóa/ẩn danh thông tin cá nhân khách hàng (PII) đối với các đơn hàng đã kết thúc quá 3 tháng (90 ngày) theo đúng cam kết bảo mật (Q-19 / Quyết định D2).
+  - Hỗ trợ cơ chế bảo vệ an toàn với khóa `CRON_SECRET` trong Header hoặc query param.
+- **Cấu hình Vercel Free Cron Job (`vercel.json`)**:
+  - Thiết lập lịch chạy tự động hàng ngày lúc 01:00 UTC (08:00 sáng giờ VN) hoàn toàn miễn phí trên gói Vercel Hobby.
+
 ## [0.6.0] - 2026-10-21 (Thêm Sản Phẩm Mới & Cấu Hình Biến Thể Đa Năng)
 
 ### Added
