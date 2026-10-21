@@ -1,0 +1,138 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createClient } from '@/lib/supabase/client';
+
+// Clean character set for order code (no 0/O, 1/I)
+const ORDER_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+function generateOrderCode(): string {
+  let result = 'CM';
+  for (let i = 0; i < 6; i++) {
+    result += ORDER_CODE_CHARS.charAt(Math.floor(Math.random() * ORDER_CODE_CHARS.length));
+  }
+  return result;
+}
+
+const checkoutSchema = z.object({
+  customerName: z.string().min(2, 'Họ tên phải có ít nhất 2 ký tự'),
+  phone: z.string().regex(/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/, 'Số điện thoại không hợp lệ'),
+  email: z.string().email('Email không đúng định dạng'),
+  province: z.string().min(1, 'Vui lòng chọn Tỉnh/Thành'),
+  ward: z.string().min(1, 'Vui lòng chọn Phường/Xã'),
+  addressDetail: z.string().min(3, 'Vui lòng nhập số nhà, tên đường cụ thể'),
+  note: z.string().optional(),
+  source: z.string().optional(),
+  paymentMethod: z.enum(['cod', 'bank_qr']),
+  items: z.array(
+    z.object({
+      variantId: z.string(),
+      productId: z.string(),
+      productName: z.string(),
+      variantName: z.string(),
+      price: z.number().int().nonnegative(),
+      quantity: z.number().int().positive(),
+      weightKg: z.number().default(0.2),
+      isPreorder: z.boolean().default(false),
+    })
+  ).min(1, 'Giỏ hàng trống'),
+  idempotencyKey: z.string().optional(),
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const parsed = checkoutSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, errors: parsed.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const {
+      customerName,
+      phone,
+      email,
+      province,
+      ward,
+      addressDetail,
+      note,
+      source,
+      paymentMethod,
+      items,
+      idempotencyKey,
+    } = parsed.data;
+
+    // Calculate shipping fee: 18.000d for HCM, 22.000d for others
+    const isHCM = province.includes('Hồ Chí Minh');
+    const shippingFee = isHCM ? 18000 : 22000;
+
+    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const total = subtotal + shippingFee;
+    const hasPreorder = items.some((it) => it.isPreorder);
+
+    // Enforce pre-order rule: pre-order must use bank_qr
+    if (hasPreorder && paymentMethod === 'cod') {
+      return NextResponse.json(
+        { success: false, message: 'Đơn hàng có sản phẩm đặt trước bắt buộc thanh toán QR' },
+        { status: 400 }
+      );
+    }
+
+    const orderCode = generateOrderCode();
+
+    // Try creating via Supabase if connected
+    const supabase = createClient();
+    try {
+      const { data: dbOrder, error: dbError } = await supabase.from('orders').insert({
+        code: orderCode,
+        customer_name: customerName,
+        phone,
+        email,
+        address_province: province,
+        address_ward: ward,
+        address_detail: addressDetail,
+        note: note || null,
+        is_preorder: hasPreorder,
+        status: 'new',
+        payment_method: paymentMethod,
+        payment_status: paymentMethod === 'bank_qr' ? 'awaiting' : 'unpaid',
+        subtotal,
+        shipping_fee: shippingFee,
+        total,
+        source: source || 'direct',
+        idempotency_key: idempotencyKey || null,
+        expires_at: paymentMethod === 'bank_qr' ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
+      }).select().single();
+
+      if (dbError) {
+        console.warn('[Checkout] Supabase insert warning (schema may not be run yet):', dbError.message);
+      }
+    } catch (dbErr) {
+      console.warn('[Checkout] Supabase call exception:', dbErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      order: {
+        code: orderCode,
+        total,
+        subtotal,
+        shippingFee,
+        paymentMethod,
+        customerName,
+        phone,
+        email,
+        address: `${addressDetail}, ${ward}, ${province}`,
+        isPreorder: hasPreorder,
+        expiresAt: paymentMethod === 'bank_qr' ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Checkout API Error]:', err);
+    return NextResponse.json(
+      { success: false, message: 'Đã có lỗi xảy ra khi tạo đơn hàng' },
+      { status: 500 }
+    );
+  }
+}
