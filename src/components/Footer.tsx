@@ -60,9 +60,14 @@ export function Footer() {
 
         <div className="pt-6 border-t border-[#FFE8EF] flex flex-col md:flex-row items-center justify-between text-xs text-[#A39A9A] gap-2">
           <p>© 2026 chocomino. All rights reserved.</p>
-          <p className="flex items-center gap-1">
-            Made with <Heart size={12} className="text-[#F9739B] fill-[#F9739B]" /> for squishy lovers
-          </p>
+          <div className="flex items-center gap-4">
+            <Link href="/admin/login" className="hover:text-[#F9739B] transition-colors text-[11px]">
+              🔒 Quản trị viên
+            </Link>
+            <p className="flex items-center gap-1">
+              Made with <Heart size={12} className="text-[#F9739B] fill-[#F9739B]" /> for squishy lovers
+            </p>
+          </div>
         </div>
       </div>
     </footer>
