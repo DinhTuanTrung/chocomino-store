@@ -1,5 +1,20 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.3.0] - 2026-10-21 (Quản lý Đơn hàng Live & In Phiếu Giao Hàng Chuẩn SPX)
+
+### Added
+- **Quản lý Đơn hàng Sống (`/admin/orders`)**:
+  - Truy vấn trực tiếp bảng `orders` và `order_items` từ Supabase.
+  - Modal xem chi tiết đơn: Thông tin khách, số điện thoại, địa chỉ 2 cấp, sản phẩm, ghi chú và tóm tắt thanh toán.
+  - **Chuyển trạng thái 1 chạm**: `new` -> `confirmed` (Xác nhận) -> `packing` (Đóng gói) -> `shipping` (Giao hàng) -> `completed` (Hoàn thành) hoặc Hủy đơn kèm lý do.
+  - Modal nhập mã vận đơn SPX khi chuyển sang trạng thái "Đang giao".
+  - API `/api/admin/orders/[id]/status` tự động cập nhật bảng `orders`, `order_status_history` và `shipments`.
+- **In Phiếu Giao Hàng TMĐT (`/admin/orders/[id]/in-phieu`)**:
+  - Hỗ trợ 2 khổ in: **Tem nhiệt 100×150mm** (chuẩn máy in nhiệt SPX) và **Khổ A5**.
+  - CSS in ấn chuẩn `@media print` tự động ẩn toàn bộ header, công cụ điều khiển, chỉ in đúng tem giao hàng.
+  - Hiển thị nổi bật **Tiền thu người nhận (COD)**: Số tiền COD thực tế cần thu hoặc hiển thị `0 VNĐ (ĐÃ THANH TOÁN)` nếu khách trả QR trước.
+  - Mã đơn dạng text to rõ, thông tin người gửi, người nhận, danh sách hàng, ghi chú và chữ ký xác nhận.
+
 ## [0.2.0] - 2026-10-21 (Kết nối Supabase Live Data & Admin Suite)
 
 ### Added
