@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSPXMassOrderExcel, SPXOrderExportItem } from '@/lib/spx/export';
+import { createClient } from '@/lib/supabase/client';
 
-// Sample mock orders for SPX export demo
+// Sample fallback orders if shop has no confirmed/packing orders yet
 const MOCK_PACKING_ORDERS: SPXOrderExportItem[] = [
   {
     id: 'ord-101',
@@ -89,7 +90,22 @@ const MOCK_PACKING_ORDERS: SPXOrderExportItem[] = [
 
 export async function POST(req: NextRequest) {
   try {
-    const result = await generateSPXMassOrderExcel(MOCK_PACKING_ORDERS);
+    const supabase = createClient();
+
+    // 1. Fetch live orders in status 'confirmed' or 'packing'
+    const { data: liveOrders, error: liveErr } = await supabase
+      .from('orders')
+      .select('*, items:order_items(*)')
+      .in('status', ['confirmed', 'packing'])
+      .order('created_at', { ascending: false });
+
+    // 2. Fallback to mock packing demo orders if database has no active confirmed/packing orders
+    const ordersToExport: SPXOrderExportItem[] =
+      liveOrders && liveOrders.length > 0
+        ? (liveOrders as SPXOrderExportItem[])
+        : MOCK_PACKING_ORDERS;
+
+    const result = await generateSPXMassOrderExcel(ordersToExport);
 
     const filename = `SPX_DonHang_Chocomino_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
@@ -101,9 +117,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error('SPX Export Error:', err);
+    console.error('SPX Export error:', err);
     return NextResponse.json(
-      { success: false, message: 'Lỗi khi xuất file Excel SPX', error: err.message },
+      { success: false, message: err?.message || 'Không thể tạo file SPX Excel' },
       { status: 500 }
     );
   }

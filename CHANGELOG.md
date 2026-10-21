@@ -1,5 +1,17 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.10.0] - 2026-10-22 (Bổ Sung In Phiếu Khổ A7 & Xuất File Excel SPX Động)
+
+### Added & Enhanced
+- **Hỗ trợ Khổ In Phiếu Giao Hàng A7 (74×105mm) (`/admin/orders/[id]/in-phieu`)**:
+  - Bổ sung tùy chọn khổ giấy **A7 (74×105mm)** chuyên dụng cho các dòng máy in tem bưu phẩm mini hoặc giấy dán kiện nhỏ.
+  - Tự động co giãn bố cục, phông chữ và căn lề siêu gọn gàng, tiền thu COD hiển thị nổi bật, hỗ trợ CSS in ấn `@page { size: 74mm 105mm; margin: 0; }`.
+  - Cung cấp đầy đủ 3 tùy chọn khổ in: **Khổ A7 (74×105mm)**, **Tem nhiệt 100×150mm** (chuẩn máy in nhiệt SPX) và **Khổ A5 (148×210mm)**.
+- **Xuất File Excel SPX Hàng Loạt Động (`/api/admin/spx-export`)**:
+  - Kết nối trực tiếp cơ sở dữ liệu Supabase, tự động gom tất cả các đơn hàng đang ở trạng thái `confirmed` (Đã xác nhận) và `packing` (Đang đóng gói) để xuất file Excel.
+  - Tự động fallback nạp dữ liệu mẫu hợp lệ nếu kho chưa có đơn chờ đóng gói để chủ shop luôn kiểm tra được định dạng file mẫu.
+  - Xuất trực tiếp vào sheet `Tạo đơn (địa chỉ mới)` của `assets/spx_template.xlsx` chuẩn xác 100% các cột thông tin người nhận, tiền COD, khối lượng kg, mã đơn và ghi chú bưu gửi.
+
 ## [0.9.0] - 2026-10-22 (Tối Ưu Mobile PWA, Web App Icon & OpenGraph Social Sharing)
 
 ### Added
