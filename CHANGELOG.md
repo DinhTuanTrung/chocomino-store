@@ -1,5 +1,13 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.9.0] - 2026-10-22 (Tối Ưu Mobile PWA, Web App Icon & OpenGraph Social Sharing)
+
+### Added
+- **Chuẩn hóa Ứng dụng Di động PWA (Web App)**:
+  - Khởi tạo file biểu tượng thương hiệu Chocomino vector chuẩn SVG [`public/icon.svg`](file:///d:/website_chocomino/public/icon.svg) phong cách bánh squishy cute màu hồng & chocolate.
+  - Cấu hình file [`public/manifest.json`](file:///d:/website_chocomino/public/manifest.json) hỗ trợ người dùng có thể "Thêm vào Màn hình chính" (Add to Home Screen) trên iPhone và Android như một App di động thực thụ (theo đúng mục tiêu Mobile-First SRS 1.3).
+  - Tích hợp siêu dữ liệu OpenGraph (OG Meta tags) trong `src/app/layout.tsx` hiển thị thẻ xem trước đẹp mắt khi gửi link web qua Zalo, Messenger, TikTok và Facebook.
+
 ## [0.8.0] - 2026-10-22 (Tách Biệt Màn Hình Đặt Hàng Thành Công COD & VietQR)
 
 ### Fixed & Enhanced

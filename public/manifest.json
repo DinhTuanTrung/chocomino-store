@@ -1,0 +1,17 @@
+{
+  "name": "chocomino — Shop Squishy Siêu Dễ Thương",
+  "short_name": "chocomino",
+  "description": "Thế giới squishy mềm mịn, bồng bềnh, chậm tăng chuẩn xịn. Đặt hàng nhanh chóng không cần đăng ký!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF9F6",
+  "theme_color": "#F9739B",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

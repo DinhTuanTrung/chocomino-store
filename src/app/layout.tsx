@@ -17,9 +17,19 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: 'chocomino — Shop Squishy Siêu Dễ Thương',
-  description: 'Thế giới squishy mềm mịn, đáng yêu. Đặt hàng nhanh chóng không cần đăng ký!',
+  description: 'Thế giới squishy mềm mịn, bồng bềnh, chậm tăng chuẩn xịn. Mua sắm dễ dàng, không cần tạo tài khoản!',
+  manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
+  openGraph: {
+    title: 'chocomino — Shop Squishy Siêu Dễ Thương',
+    description: 'Thế giới squishy mềm mịn, bồng bềnh, chậm tăng chuẩn xịn. Giao hàng hỏa tốc toàn quốc SPX!',
+    siteName: 'chocomino shop',
+    locale: 'vi_VN',
+    type: 'website',
   },
 };
 
