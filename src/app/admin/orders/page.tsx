@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AdminNav } from '@/components/AdminNav';
+import { createClient } from '@/lib/supabase/client';
+import type { Order, OrderItem, OrderStatus } from '@/types/database';
 import {
   FileSpreadsheet,
   Package,
@@ -12,65 +14,90 @@ import {
   Printer,
   Search,
   Filter,
-  ArrowUpDown,
-  ExternalLink,
+  RefreshCw,
+  Eye,
+  X,
+  AlertTriangle,
 } from 'lucide-react';
 
-const INITIAL_ORDERS = [
-  {
-    id: 'ord-101',
-    code: 'CM7K2P9Q',
-    customerName: 'Nguyễn Thị Hồng',
-    phone: '0987654321',
-    province: 'Thành phố Hồ Chí Minh',
-    ward: 'Phường Dĩ An',
-    addressDetail: '38/32 Đường Số 2',
-    status: 'packing',
-    paymentMethod: 'cod',
-    paymentStatus: 'unpaid',
-    total: 108000,
-    itemsText: 'Squishy Bánh Mì Nướng (Vị Socola × 2)',
-    isPreorder: false,
-    createdAt: '21/10/2026 14:20',
-  },
-  {
-    id: 'ord-102',
-    code: 'CM8M4R2X',
-    customerName: 'Trần Văn Nam',
-    phone: '0912345678',
-    province: 'Thành phố Hà Nội',
-    ward: 'Phường Hàng Bạc',
-    addressDetail: 'Số 12 Phố Hàng Bạc',
-    status: 'packing',
-    paymentMethod: 'bank_qr',
-    paymentStatus: 'paid',
-    total: 87000,
-    itemsText: 'Squishy Mèo Béo Bánh Bao (Trắng × 1)',
-    isPreorder: false,
-    createdAt: '21/10/2026 15:45',
-  },
-  {
-    id: 'ord-103',
-    code: 'CM9P5T3Z',
-    customerName: 'Lê Thùy Dung',
-    phone: '0903344556',
-    province: 'Thành phố Hồ Chí Minh',
-    ward: 'Phường Bến Nghé',
-    addressDetail: 'Số 10 Nguyễn Huệ',
-    status: 'new',
-    paymentMethod: 'cod',
-    paymentStatus: 'unpaid',
-    total: 70000,
-    itemsText: 'Squishy Quả Dâu Tây (Hồng × 1)',
-    isPreorder: false,
-    createdAt: '21/10/2026 16:10',
-  },
-];
+interface OrderWithItems extends Order {
+  items: OrderItem[];
+}
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [orders, setOrders] = useState<OrderWithItems[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [exporting, setExporting] = useState(false);
+
+  // Selected Order for Modal View
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
+
+  // Action status state
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [trackingInput, setTrackingInput] = useState('');
+  const [showShippingModal, setShowShippingModal] = useState(false);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, items:order_items(*)')
+        .order('created_at', { ascending: false });
+
+      if (data && data.length > 0) {
+        setOrders(data as OrderWithItems[]);
+      } else {
+        setOrders([]);
+      }
+    } catch (err) {
+      console.error('Lỗi khi nạp danh sách đơn hàng:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleUpdateStatus = async (orderId: string, nextStatus: OrderStatus, trackingCode?: string) => {
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nextStatus,
+          trackingCode,
+          reason: `Admin cập nhật trạng thái sang ${nextStatus}`,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Không thể đổi trạng thái đơn');
+        return;
+      }
+
+      // Update state locally
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
+      );
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder((prev) => (prev ? { ...prev, status: nextStatus } : null));
+      }
+      setShowShippingModal(false);
+      setTrackingInput('');
+    } catch (err) {
+      alert('Lỗi kết nối khi cập nhật trạng thái');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const handleExportSPX = async () => {
     setExporting(true);
@@ -96,14 +123,41 @@ export default function AdminOrdersPage() {
   };
 
   const filteredOrders = orders.filter((o) => {
-    if (filterStatus === 'all') return true;
-    return o.status === filterStatus;
+    if (filterStatus !== 'all' && o.status !== filterStatus) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchCode = o.code.toLowerCase().includes(q);
+      const matchName = o.customer_name.toLowerCase().includes(q);
+      const matchPhone = o.phone.includes(q);
+      if (!matchCode && !matchName && !matchPhone) return false;
+    }
+    return true;
   });
+
+  const getStatusBadge = (status: OrderStatus) => {
+    switch (status) {
+      case 'new':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">Đơn mới</span>;
+      case 'confirmed':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">Đã xác nhận</span>;
+      case 'packing':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Đang đóng gói</span>;
+      case 'shipping':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800">Đang giao</span>;
+      case 'completed':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800">Hoàn thành</span>;
+      case 'cancelled':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">Đã hủy</span>;
+      default:
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-800">{status}</span>;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FFF9F6] text-[#5A3A3A]">
       <AdminNav />
-      <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
+
+      <main className="max-w-6xl w-full mx-auto p-4 md:p-8 space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -111,119 +165,367 @@ export default function AdminOrdersPage() {
               Quản lý Đơn hàng Chocomino 📦
             </h1>
             <p className="text-xs text-[#7D5C5C]">
-              Xem trạng thái, đổi trạng thái và xuất file Excel mẫu chuẩn giao hàng SPX.
+              Xác nhận đơn, chuyển trạng thái 1 chạm, in phiếu giao hàng và xuất file Excel mẫu SPX.
             </p>
           </div>
 
-          {/* SPX Export Action Button */}
+          {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={fetchOrders}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all shadow-xs"
+              title="Tải lại đơn hàng"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <span>Làm mới</span>
+            </button>
+
             <button
               onClick={handleExportSPX}
               disabled={exporting}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#E24C7C] text-white font-title text-xs font-bold shadow-md hover:bg-[#F9739B] transition-all disabled:bg-[#A39A9A]"
             >
               <FileSpreadsheet size={16} />
-              {exporting ? 'Đang xuất Excel...' : 'Xuất Excel SPX (Sheet Mới)'}
+              {exporting ? 'Đang xuất...' : 'Xuất Excel SPX'}
             </button>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-3xl border border-[#FFE8EF] p-4 flex flex-wrap items-center gap-2 text-xs font-bold">
-          <span className="text-[#A39A9A] mr-2 flex items-center gap-1">
-            <Filter size={14} /> Lọc theo:
-          </span>
-          {[
-            { id: 'all', label: 'Tất cả đơn' },
-            { id: 'new', label: 'Đơn mới' },
-            { id: 'packing', label: 'Đang đóng gói' },
-            { id: 'shipping', label: 'Đang giao' },
-            { id: 'completed', label: 'Hoàn thành' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setFilterStatus(tab.id)}
-              className={`px-3 py-1.5 rounded-full transition-colors ${
-                filterStatus === tab.id
-                  ? 'bg-[#5A3A3A] text-white'
-                  : 'bg-[#FFF9F6] text-[#7D5C5C] hover:bg-[#FFE8EF]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Filters & Search */}
+        <div className="bg-white rounded-3xl border border-[#FFE8EF] p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xs">
+          {/* Search */}
+          <div className="relative w-full md:w-80">
+            <input
+              type="text"
+              placeholder="Tìm theo mã đơn, tên khách, SĐT..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#FFF9F6] border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
+            />
+            <Search size={15} className="absolute left-3 top-2.5 text-[#A39A9A]" />
+          </div>
+
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto text-xs font-bold">
+            {[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'new', label: 'Đơn mới' },
+              { id: 'confirmed', label: 'Xác nhận' },
+              { id: 'packing', label: 'Đóng gói' },
+              { id: 'shipping', label: 'Đang giao' },
+              { id: 'completed', label: 'Hoàn thành' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setFilterStatus(tab.id)}
+                className={`px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${
+                  filterStatus === tab.id
+                    ? 'bg-[#5A3A3A] text-white'
+                    : 'bg-[#FFF9F6] text-[#7D5C5C] hover:bg-[#FFE8EF]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Orders Table */}
         <div className="bg-white rounded-3xl border border-[#FFE8EF] overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#FFF9F6] border-b border-[#FFE8EF] text-[#7D5C5C] uppercase text-[10px]">
-                <tr>
-                  <th className="p-4">Mã đơn</th>
-                  <th className="p-4">Khách hàng</th>
-                  <th className="p-4">Sản phẩm</th>
-                  <th className="p-4">Khu vực</th>
-                  <th className="p-4">Thanh toán</th>
-                  <th className="p-4">Tổng tiền</th>
-                  <th className="p-4">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#FFE8EF]">
-                {filteredOrders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-[#FFF9F6]/50 transition-colors">
-                    <td className="p-4 font-mono font-bold text-[#F9739B]">
-                      {ord.code}
-                    </td>
-                    <td className="p-4 space-y-0.5">
-                      <p className="font-bold text-[#5A3A3A]">{ord.customerName}</p>
-                      <p className="text-[11px] text-[#A39A9A]">{ord.phone}</p>
-                    </td>
-                    <td className="p-4 text-[11px] max-w-[200px] truncate text-[#7D5C5C]">
-                      {ord.itemsText}
-                    </td>
-                    <td className="p-4 text-[11px] text-[#7D5C5C]">
-                      {ord.ward}, {ord.province}
-                    </td>
-                    <td className="p-4">
-                      <span className="block font-bold">
-                        {ord.paymentMethod === 'cod' ? 'COD' : 'VietQR'}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold ${
-                          ord.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'
-                        }`}
-                      >
-                        {ord.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa trả'}
-                      </span>
-                    </td>
-                    <td className="p-4 font-title font-bold text-[#E24C7C]">
-                      {ord.total.toLocaleString('vi-VN')}đ
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          ord.status === 'packing'
-                            ? 'bg-amber-100 text-amber-800'
-                            : ord.status === 'new'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {ord.status === 'packing'
-                          ? 'Đóng gói'
-                          : ord.status === 'new'
-                          ? 'Mới'
-                          : 'Hoàn thành'}
-                      </span>
-                    </td>
+          {loading ? (
+            <div className="text-center py-20 text-xs text-[#7D5C5C]">
+              Đang tải danh sách đơn hàng từ Supabase...
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-center py-16 p-6 text-xs text-[#7D5C5C]">
+              Không có đơn hàng nào phù hợp với bộ lọc.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#FFF9F6] border-b border-[#FFE8EF] text-[#7D5C5C] uppercase text-[10px]">
+                  <tr>
+                    <th className="p-4">Mã đơn</th>
+                    <th className="p-4">Khách hàng</th>
+                    <th className="p-4">Khu vực</th>
+                    <th className="p-4">Thanh toán</th>
+                    <th className="p-4">Tổng tiền</th>
+                    <th className="p-4">Trạng thái</th>
+                    <th className="p-4 text-center">Thao tác</th>
                   </tr>
+                </thead>
+                <tbody className="divide-y divide-[#FFE8EF]">
+                  {filteredOrders.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-[#FFF9F6]/50 transition-colors">
+                      <td className="p-4 font-mono font-bold text-[#F9739B]">
+                        {ord.code}
+                      </td>
+                      <td className="p-4 space-y-0.5">
+                        <p className="font-bold text-[#5A3A3A]">{ord.customer_name}</p>
+                        <p className="text-[11px] text-[#A39A9A]">{ord.phone}</p>
+                      </td>
+                      <td className="p-4 text-[11px] text-[#7D5C5C]">
+                        {ord.address_ward}, {ord.address_province}
+                      </td>
+                      <td className="p-4">
+                        <span className="block font-bold">
+                          {ord.payment_method === 'cod' ? 'COD' : 'VietQR'}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold ${
+                            ord.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'
+                          }`}
+                        >
+                          {ord.payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa trả'}
+                        </span>
+                      </td>
+                      <td className="p-4 font-title font-bold text-[#E24C7C]">
+                        {ord.total.toLocaleString('vi-VN')}đ
+                      </td>
+                      <td className="p-4">
+                        {getStatusBadge(ord.status)}
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setSelectedOrder(ord)}
+                            className="p-1.5 rounded-lg bg-[#FFF9F6] hover:bg-[#FFE8EF] text-[#5A3A3A] transition-colors"
+                            title="Xem chi tiết đơn"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <Link
+                            href={`/admin/orders/${ord.id}/in-phieu`}
+                            className="p-1.5 rounded-lg bg-[#FFF9F6] hover:bg-[#FFE8EF] text-[#5A3A3A] transition-colors"
+                            title="In phiếu giao hàng"
+                          >
+                            <Printer size={15} />
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl border border-[#FFE8EF] animate-fadeIn">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-3">
+              <div>
+                <span className="text-[10px] text-[#A39A9A]">Chi tiết đơn hàng</span>
+                <p className="font-title text-xl font-extrabold text-[#F9739B]">
+                  {selectedOrder.code}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="p-1 rounded-full text-[#A39A9A] hover:text-[#5A3A3A]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Customer & Address Details */}
+            <div className="bg-[#FFF9F6] p-4 rounded-2xl border border-[#FFE8EF] space-y-2 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[10px] text-[#A39A9A]">Khách hàng:</span>
+                  <p className="font-bold text-[#5A3A3A]">{selectedOrder.customer_name}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#A39A9A]">Số điện thoại:</span>
+                  <p className="font-bold text-[#5A3A3A]">{selectedOrder.phone}</p>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-[#A39A9A]">Email:</span>
+                <p className="font-medium text-[#5A3A3A]">{selectedOrder.email}</p>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-[#A39A9A]">Địa chỉ nhận hàng:</span>
+                <p className="font-bold text-[#5A3A3A]">
+                  {selectedOrder.address_detail}, {selectedOrder.address_ward}, {selectedOrder.address_province}
+                </p>
+              </div>
+
+              {selectedOrder.note && (
+                <div className="pt-1 border-t border-[#FFE8EF]">
+                  <span className="text-[10px] text-[#A39A9A]">Ghi chú của khách:</span>
+                  <p className="italic text-[#7D5C5C]">{selectedOrder.note}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Product Items */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-[#7D5C5C] uppercase tracking-wider">
+                Sản phẩm đặt mua ({selectedOrder.items?.length || 0}):
+              </span>
+              <div className="divide-y divide-[#FFE8EF] border border-[#FFE8EF] rounded-2xl overflow-hidden">
+                {selectedOrder.items?.map((it, idx) => (
+                  <div key={idx} className="p-3 flex items-center justify-between text-xs bg-white">
+                    <div>
+                      <p className="font-bold text-[#5A3A3A]">{it.product_name_snapshot}</p>
+                      <p className="text-[11px] text-[#A39A9A]">Phân loại: {it.variant_name_snapshot}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-[#E24C7C]">
+                        {it.unit_price.toLocaleString('vi-VN')}đ × {it.quantity}
+                      </span>
+                      <p className="font-bold text-xs text-[#5A3A3A]">
+                        {it.line_total.toLocaleString('vi-VN')}đ
+                      </p>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
+
+            {/* Financial Summary */}
+            <div className="p-3 rounded-2xl bg-[#FFE8EF]/40 border border-[#F9739B]/20 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span>Tiền hàng:</span>
+                <span className="font-bold">{selectedOrder.subtotal.toLocaleString('vi-VN')}đ</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Phí vận chuyển SPX:</span>
+                <span className="font-bold">{selectedOrder.shipping_fee.toLocaleString('vi-VN')}đ</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-[#F9739B]/30 font-bold text-sm">
+                <span>Tổng đơn:</span>
+                <span className="text-[#E24C7C] font-title text-base font-extrabold">
+                  {selectedOrder.total.toLocaleString('vi-VN')}đ
+                </span>
+              </div>
+              <div className="text-[10px] text-[#7D5C5C]">
+                Hình thức: <b>{selectedOrder.payment_method === 'cod' ? 'Thu COD' : 'Chuyển khoản VietQR'}</b> ({selectedOrder.payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán'})
+              </div>
+            </div>
+
+            {/* 1-Click Status Transitions */}
+            <div className="space-y-2 pt-2 border-t border-[#FFE8EF]">
+              <span className="text-xs font-bold text-[#7D5C5C] uppercase tracking-wider block">
+                Chuyển trạng thái 1 chạm:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {selectedOrder.status === 'new' && (
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, 'confirmed')}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-purple-600 text-white font-bold text-xs hover:bg-purple-700 transition-colors"
+                  >
+                    Xác nhận đơn
+                  </button>
+                )}
+                {(selectedOrder.status === 'new' || selectedOrder.status === 'confirmed') && (
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, 'packing')}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-amber-500 text-white font-bold text-xs hover:bg-amber-600 transition-colors"
+                  >
+                    Chuyển đóng gói
+                  </button>
+                )}
+                {selectedOrder.status === 'packing' && (
+                  <button
+                    onClick={() => setShowShippingModal(true)}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors"
+                  >
+                    Giao hàng SPX (Nhập mã vận đơn)
+                  </button>
+                )}
+                {selectedOrder.status === 'shipping' && (
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, 'completed')}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-green-600 text-white font-bold text-xs hover:bg-green-700 transition-colors"
+                  >
+                    Đánh dấu Hoàn thành
+                  </button>
+                )}
+                {selectedOrder.status !== 'completed' && selectedOrder.status !== 'cancelled' && (
+                  <button
+                    onClick={() => {
+                      const reason = prompt('Nhập lý do hủy đơn:');
+                      if (reason) {
+                        handleUpdateStatus(selectedOrder.id, 'cancelled');
+                      }
+                    }}
+                    disabled={isUpdatingStatus}
+                    className="py-2.5 px-3 rounded-xl bg-gray-100 text-red-600 hover:bg-red-50 font-bold text-xs transition-colors"
+                  >
+                    Hủy đơn
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="pt-2 flex items-center justify-between border-t border-[#FFE8EF]">
+              <Link
+                href={`/admin/orders/${selectedOrder.id}/in-phieu`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-black text-white font-bold text-xs hover:bg-gray-800 transition-colors"
+              >
+                <Printer size={14} /> In phiếu giao hàng
+              </Link>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#7D5C5C] hover:bg-[#FFE8EF]"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Modal Prompt for Tracking Code when Shipping */}
+      {showShippingModal && selectedOrder && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-xl border border-[#FFE8EF]">
+            <h3 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
+              <Truck size={18} className="text-[#F9739B]" /> Chuyển sang "Đang giao"
+            </h3>
+            <p className="text-xs text-[#7D5C5C]">
+              Nhập mã vận đơn nhận được từ cổng SPX (ví dụ: SPXVN0392817281):
+            </p>
+            <input
+              type="text"
+              placeholder="Mã vận đơn SPX..."
+              value={trackingInput}
+              onChange={(e) => setTrackingInput(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs font-mono uppercase"
+            />
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowShippingModal(false)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#7D5C5C] hover:bg-[#FFE8EF]"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(selectedOrder.id, 'shipping', trackingInput)}
+                disabled={isUpdatingStatus}
+                className="px-4 py-2 rounded-xl bg-[#F9739B] text-white font-bold text-xs hover:bg-[#E24C7C] transition-colors"
+              >
+                Xác nhận giao hàng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
