@@ -1,5 +1,16 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.8.0] - 2026-10-22 (Tách Biệt Màn Hình Đặt Hàng Thành Công COD & VietQR)
+
+### Fixed & Enhanced
+- **Tách biệt rõ ràng phương thức thanh toán COD vs VietQR (`/dat-hang-thanh-cong`)**:
+  - Khắc phục triệt để lỗi logic `order?.paymentMethod === 'bank_qr' || true` khiến mọi đơn hàng (kể cả COD) đều hiển thị khung quét mã VietQR và đồng hồ đếm ngược 15 phút.
+  - **Màn hình Đặt hàng Thành công dành riêng cho COD**:
+    - Hiển thị icon xe giao hàng SPX và thông báo: *"Thanh toán khi nhận hàng (COD) - Bạn chỉ cần thanh toán tiền mặt cho nhân viên giao hàng SPX khi nhận gói hàng"*.
+    - Hiển thị to rõ số tiền thực tế shipper cần thu, thông tin người nhận, số điện thoại, địa chỉ giao hàng và các lưu ý nhận bưu phẩm chuẩn TMĐT.
+  - **Màn hình VietQR**: Chỉ kích hoạt khi khách hàng chọn thanh toán chuyển khoản hoặc giỏ hàng có sản phẩm Pre-order (bắt buộc trả trước).
+  - Tự động fallback truy vấn dữ liệu từ Supabase nếu người dùng tải lại trang hoặc mở trực tiếp trên thiết bị khác.
+
 ## [0.7.0] - 2026-10-22 (Tự Động Hủy Đơn QR 15 Phút, Ẩn Danh PII 90 Ngày & Vercel Cron)
 
 ### Added

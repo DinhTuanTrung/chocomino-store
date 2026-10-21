@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { generateVietQRUrl } from '@/lib/sepay/vietqr';
+import { createClient } from '@/lib/supabase/client';
 import {
   CheckCircle2,
   Copy,
@@ -16,32 +17,61 @@ import {
   ShieldCheck,
   ShoppingBag,
   ExternalLink,
+  Truck,
 } from 'lucide-react';
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const code = searchParams.get('code') || 'CM000000';
+  const pmParam = searchParams.get('pm');
 
   const [order, setOrder] = useState<any>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(15 * 60); // 15 mins countdown
 
   useEffect(() => {
-    // Try reading last order from sessionStorage
+    // 1. Try reading last order from sessionStorage
     try {
       const stored = sessionStorage.getItem('last_chocomino_order');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.code === code) {
           setOrder(parsed);
+          return;
         }
       }
     } catch (e) {
       console.error(e);
     }
+
+    // 2. Fallback fetch from Supabase if not in sessionStorage
+    if (code && code !== 'CM000000') {
+      const supabase = createClient();
+      supabase
+        .from('orders')
+        .select('*')
+        .eq('code', code)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setOrder({
+              code: data.code,
+              total: data.total,
+              subtotal: data.subtotal,
+              shippingFee: data.shipping_fee,
+              paymentMethod: data.payment_method,
+              customerName: data.customer_name,
+              phone: data.phone,
+              email: data.email,
+              address: `${data.address_detail}, ${data.address_ward}, ${data.address_province}`,
+              isPreorder: data.is_preorder,
+            });
+          }
+        });
+    }
   }, [code]);
 
-  // 15-minute countdown timer
+  // 15-minute countdown timer (only for bank_qr)
   useEffect(() => {
     if (timeLeftSeconds <= 0) return;
     const timer = setInterval(() => {
@@ -60,7 +90,8 @@ function OrderSuccessContent() {
   const seconds = timeLeftSeconds % 60;
   const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-  const isBankQR = order?.paymentMethod === 'bank_qr' || true;
+  const paymentMethod = order?.paymentMethod || order?.payment_method || pmParam || 'cod';
+  const isBankQR = paymentMethod === 'bank_qr';
   const bankAccount = '19030000000000'; // Default Techcombank account placeholder
   const bankName = 'Techcombank';
   const accountHolder = 'NGUYEN VAN TRUNG';
@@ -101,8 +132,8 @@ function OrderSuccessContent() {
         </div>
       </div>
 
-      {/* QR Bank Transfer Section */}
-      {isBankQR && (
+      {/* QR Bank Transfer Section (Only for Bank QR payment) */}
+      {isBankQR ? (
         <div className="bg-white rounded-3xl border border-[#FFE8EF] p-6 space-y-5 shadow-xs">
           <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-4">
             <div>
@@ -185,6 +216,60 @@ function OrderSuccessContent() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* COD Cash on Delivery Information Section */
+        <div className="bg-white rounded-3xl border border-[#FFE8EF] p-6 space-y-5 shadow-xs">
+          <div className="flex items-center gap-3 border-b border-[#FFE8EF] pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200">
+              <Truck size={24} />
+            </div>
+            <div>
+              <h2 className="font-title text-base font-bold text-[#5A3A3A]">
+                Thanh toán khi nhận hàng (COD)
+              </h2>
+              <p className="text-[11px] text-[#7D5C5C]">
+                Bạn chỉ cần thanh toán tiền mặt cho nhân viên giao hàng SPX Express khi nhận gói hàng
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#FFF9F6] p-4 rounded-2xl border border-[#FFE8EF] space-y-3 text-xs">
+            <div className="flex items-center justify-between py-1 border-b border-[#FFE8EF]">
+              <span className="text-[#7D5C5C]">Số tiền cần thanh toán cho shipper:</span>
+              <span className="font-title text-lg font-extrabold text-[#E24C7C]">
+                {totalAmount.toLocaleString('vi-VN')}đ
+              </span>
+            </div>
+
+            <div className="space-y-1.5 pt-1 text-[11px]">
+              <div className="flex justify-between">
+                <span className="text-[#A39A9A]">Người nhận:</span>
+                <span className="font-bold text-[#5A3A3A]">{order?.customerName || 'Khách hàng'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#A39A9A]">Số điện thoại:</span>
+                <span className="font-bold text-[#5A3A3A]">{order?.phone || 'Chưa cập nhật'}</span>
+              </div>
+              {order?.address && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-[#A39A9A] shrink-0">Địa chỉ giao:</span>
+                  <span className="font-medium text-[#5A3A3A] text-right">{order.address}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 space-y-1 text-[11px]">
+              <p className="font-bold flex items-center gap-1.5 text-amber-800">
+                <ShieldCheck size={14} className="text-amber-600 shrink-0" /> Hướng dẫn nhận hàng thuận tiện:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 text-[10px] text-amber-900/90 pl-1">
+                <li>Shipper SPX Express sẽ gọi điện trước khi phát hàng. Vui lòng chú ý điện thoại.</li>
+                <li>Chuẩn bị sẵn đúng số tiền <b>{totalAmount.toLocaleString('vi-VN')}đ</b> để thanh toán nhanh chóng.</li>
+                <li>Nhớ quay video mở hộp (unboxing) khi nhận hàng để được bảo vệ quyền lợi đổi trả trong 3 ngày.</li>
+              </ul>
             </div>
           </div>
         </div>

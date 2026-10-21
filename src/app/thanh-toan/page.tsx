@@ -143,7 +143,7 @@ export default function CheckoutPage() {
       sessionStorage.setItem('last_chocomino_order', JSON.stringify(createdOrder));
 
       // Redirect to Order Success / QR page
-      router.push(`/dat-hang-thanh-cong?code=${createdOrder.code}`);
+      router.push(`/dat-hang-thanh-cong?code=${createdOrder.code}&pm=${createdOrder.paymentMethod}`);
     } catch (err) {
       console.error('Lỗi khi gửi đơn hàng:', err);
       setErrorMessage('Đã có lỗi kết nối đến máy chủ. Vui lòng thử lại!');
