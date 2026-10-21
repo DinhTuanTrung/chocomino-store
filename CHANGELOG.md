@@ -1,5 +1,19 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.4.0] - 2026-10-21 (Bảo mật & Xác thực Phân quyền Admin)
+
+### Added
+- **Đăng nhập Quản trị viên (`/admin/login`)**:
+  - Giao diện đăng nhập chuẩn thương hiệu Chocomino với tông hồng & nâu chocolate.
+  - Kiểm tra điều kiện mật khẩu tối thiểu 10 ký tự (theo đặc tả SRS 3.8).
+  - Tích hợp tài khoản Chủ shop mặc định (`admin@chocomino.local` / `Chocomino2026!`) và hỗ trợ xác thực danh sách nhân viên qua bảng `admin_users`.
+- **Bảo mật Phiên & Token**:
+  - Ký và xác thực token session an toàn bằng thuật toán HMAC-SHA256 lưu trong HTTP-only Cookie (`chocomino_admin_session`) với thời hạn 7 ngày.
+  - API đăng xuất `/api/admin/auth/logout` xóa cookie an toàn.
+- **Middleware Bảo vệ Tuyến đường (`middleware.ts`)**:
+  - Tự động chặn truy cập trái phép vào toàn bộ phân hệ `/admin/*` và chuyển hướng về `/admin/login`.
+  - Tự động chèn header `X-Robots-Tag: noindex, nofollow` để ngăn chặn hoàn toàn việc Google và các công cụ tìm kiếm index dữ liệu admin nội bộ.
+
 ## [0.3.0] - 2026-10-21 (Quản lý Đơn hàng Live & In Phiếu Giao Hàng Chuẩn SPX)
 
 ### Added
