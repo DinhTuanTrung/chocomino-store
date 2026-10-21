@@ -84,29 +84,60 @@ export async function POST(req: NextRequest) {
     // Try creating via Supabase if connected
     const supabase = createClient();
     try {
-      const { data: dbOrder, error: dbError } = await supabase.from('orders').insert({
-        code: orderCode,
-        customer_name: customerName,
-        phone,
-        email,
-        address_province: province,
-        address_ward: ward,
-        address_detail: addressDetail,
-        note: note || null,
-        is_preorder: hasPreorder,
-        status: 'new',
-        payment_method: paymentMethod,
-        payment_status: paymentMethod === 'bank_qr' ? 'awaiting' : 'unpaid',
-        subtotal,
-        shipping_fee: shippingFee,
-        total,
-        source: source || 'direct',
-        idempotency_key: idempotencyKey || null,
-        expires_at: paymentMethod === 'bank_qr' ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
-      }).select().single();
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const allValidUUIDs = items.every((i) => isUUID.test(i.variantId));
 
-      if (dbError) {
-        console.warn('[Checkout] Supabase insert warning (schema may not be run yet):', dbError.message);
+      if (allValidUUIDs) {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_order_atomic', {
+          p_order: {
+            code: orderCode,
+            customer_name: customerName,
+            phone,
+            email,
+            address_province: province,
+            address_ward: ward,
+            address_detail: addressDetail,
+            note: note || null,
+            source: source || 'direct',
+            payment_method: paymentMethod,
+            shipping_fee: shippingFee,
+            idempotency_key: idempotencyKey || null,
+          },
+          p_items: items.map((it) => ({
+            variant_id: it.variantId,
+            product_id: it.productId,
+            product_name_snapshot: it.productName,
+            variant_name_snapshot: it.variantName,
+            unit_price: it.price,
+            quantity: it.quantity,
+          })),
+        });
+
+        if (rpcError) {
+          console.warn('[Checkout] RPC atomic checkout warning:', rpcError.message);
+        }
+      } else {
+        // Fallback direct insert for mock IDs
+        await supabase.from('orders').insert({
+          code: orderCode,
+          customer_name: customerName,
+          phone,
+          email,
+          address_province: province,
+          address_ward: ward,
+          address_detail: addressDetail,
+          note: note || null,
+          is_preorder: hasPreorder,
+          status: 'new',
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === 'bank_qr' ? 'awaiting' : 'unpaid',
+          subtotal,
+          shipping_fee: shippingFee,
+          total,
+          source: source || 'direct',
+          idempotency_key: idempotencyKey || null,
+          expires_at: paymentMethod === 'bank_qr' ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
+        });
       }
     } catch (dbErr) {
       console.warn('[Checkout] Supabase call exception:', dbErr);
