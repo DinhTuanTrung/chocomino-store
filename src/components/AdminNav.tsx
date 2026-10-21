@@ -2,11 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ShoppingBag, Package, Settings, ExternalLink, Sparkles } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ShoppingBag, Package, Settings, ExternalLink, Sparkles, LogOut, User } from 'lucide-react';
 
 export function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { href: '/admin/orders', label: 'Đơn hàng & SPX', icon: ShoppingBag },
@@ -14,23 +15,32 @@ export function AdminNav() {
     { href: '/admin/settings', label: 'Cài đặt shop', icon: Settings },
   ];
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST' });
+      router.push('/admin/login');
+    } catch (e) {
+      router.push('/admin/login');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-[#FFE8EF]">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-3">
           <Link href="/admin/orders" className="flex items-center gap-1.5">
-            <div className="w-8 h-8 rounded-full bg-[#E24C7C] text-white flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-full bg-[#E24C7C] text-white flex items-center justify-center font-bold shadow-xs">
               <Sparkles size={16} />
             </div>
             <span className="font-title text-xl font-bold text-[#5A3A3A]">
-              chocomino <span className="text-xs bg-[#FFE8EF] text-[#E24C7C] px-2 py-0.5 rounded-full">Admin</span>
+              chocomino <span className="text-xs bg-[#FFE8EF] text-[#E24C7C] px-2 py-0.5 rounded-full font-bold">Admin</span>
             </span>
           </Link>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex items-center gap-1 text-xs font-bold">
+        <nav className="hidden md:flex items-center gap-1 text-xs font-bold">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(item.href);
@@ -51,15 +61,26 @@ export function AdminNav() {
           })}
         </nav>
 
-        {/* View Storefront */}
-        <Link
-          href="/"
-          target="_blank"
-          className="inline-flex items-center gap-1 text-xs font-bold text-[#7D5C5C] hover:text-[#F9739B] transition-colors"
-        >
-          <span>Xem web shop</span>
-          <ExternalLink size={13} />
-        </Link>
+        {/* User Actions: Storefront & Logout */}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            target="_blank"
+            className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-[#7D5C5C] hover:text-[#F9739B] transition-colors"
+          >
+            <span>Xem web shop</span>
+            <ExternalLink size={13} />
+          </Link>
+
+          <button
+            onClick={handleLogout}
+            className="inline-flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-full hover:bg-red-50 transition-colors"
+            title="Đăng xuất khỏi hệ thống quản trị"
+          >
+            <LogOut size={14} />
+            <span className="hidden sm:inline">Đăng xuất</span>
+          </button>
+        </div>
       </div>
     </header>
   );
