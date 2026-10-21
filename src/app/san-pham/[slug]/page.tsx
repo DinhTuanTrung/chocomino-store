@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ProductDetailClient } from './ProductDetailClient';
-import { MOCK_PRODUCTS } from '@/data/mock_products';
+import { getProducts } from '@/lib/supabase/products';
 
 export async function generateStaticParams() {
-  return MOCK_PRODUCTS.map((product) => ({
+  const products = await getProducts();
+  return products.map((product) => ({
     slug: product.slug,
   }));
 }
@@ -17,7 +18,8 @@ export default async function ProductDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = MOCK_PRODUCTS.find((p) => p.slug === slug);
+  const products = await getProducts();
+  const product = products.find((p) => p.slug === slug);
 
   if (!product) {
     notFound();

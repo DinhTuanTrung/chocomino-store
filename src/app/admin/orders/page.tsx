@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { AdminNav } from '@/components/AdminNav';
 import {
   FileSpreadsheet,
   Package,
@@ -100,8 +101,9 @@ export default function AdminOrdersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#FFF9F6] text-[#5A3A3A] p-4 md:p-8">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="min-h-screen bg-[#FFF9F6] text-[#5A3A3A]">
+      <AdminNav />
+      <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
