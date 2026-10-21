@@ -1,5 +1,16 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.6.0] - 2026-10-21 (Thêm Sản Phẩm Mới & Cấu Hình Biến Thể Đa Năng)
+
+### Added
+- **Giao diện Thêm Sản Phẩm Mới (`/admin/products`)**:
+  - Modal tạo sản phẩm trực quan: Tên sản phẩm, danh mục, mô tả cảm giác mềm mịn, đường dẫn ảnh (URL online), đánh dấu sản phẩm nổi bật ⭐.
+  - **Quản lý đa biến thể linh hoạt**: Cho phép thêm/xóa không giới hạn các phân loại (màu sắc, kích thước, combo), tự sinh mã SKU, định giá bán, giá so sánh gạch ngang, tồn kho ban đầu và cân nặng chuẩn SPX (kg).
+  - **Cấu hình Pre-order thông minh**: Lựa chọn trạng thái hàng có sẵn hoặc Đặt trước kèm ngày dự kiến về hàng (ETA).
+- **Backend & Database Atomic RPC**:
+  - API `/api/admin/products/create` kiểm tra và chuẩn hóa dữ liệu đầu vào bằng Zod schema, tự động tạo slug chuẩn SEO không dấu.
+  - Viết file migration SQL [`supabase/migrations/20261021_product_management.sql`](file:///d:/website_chocomino/supabase/migrations/20261021_product_management.sql) chứa hàm Stored Procedure `create_product_atomic` thực thi thêm sản phẩm, biến thể và hình ảnh trong một transaction an toàn, kèm chính sách RLS cho phép ghi dữ liệu.
+
 ## [0.5.0] - 2026-10-21 (Chính sách Đổi Trả 3 Ngày & Admin Xử Lý Hoàn Tiền)
 
 ### Added
