@@ -124,6 +124,23 @@ export interface Order {
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
+  returns?: ReturnRequest[];
+}
+
+export interface ReturnRequest {
+  id: string;
+  order_id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'resolved';
+  customer_reason: string;
+  customer_description: string | null;
+  photos: string[];
+  video_url: string | null;
+  shop_note: string | null;
+  resolved_by: string | null;
+  resolution: 'approved' | 'rejected' | 'refunded' | 'refund' | 'exchange' | null;
+  refund_amount: number;
+  created_at: string;
+  resolved_at: string | null;
 }
 
 export interface Customer {

@@ -1,5 +1,22 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.5.0] - 2026-10-21 (Chính sách Đổi Trả 3 Ngày & Admin Xử Lý Hoàn Tiền)
+
+### Added
+- **Quy trình Yêu Cầu Đổi Trả Cho Khách Hàng (`/tra-cuu`)**:
+  - Tích hợp form yêu cầu đổi trả ngay trên trang tra cứu đơn hàng theo quyết định D2/SRS.
+  - Tự động kiểm tra thời hạn: Chỉ cho phép gửi yêu cầu trong vòng 3 ngày kể từ khi đơn hàng đạt trạng thái `completed`. Quá thời hạn sẽ hiển thị thông báo chính sách đổi trả đã hết hiệu lực.
+  - **Bắt buộc link video unboxing mở hộp**: Khách hàng phải cung cấp liên kết video unboxing rõ nét (Google Drive, YouTube, TikTok, v.v.) để chống gian lận.
+  - API `/api/orders/return-request` kiểm tra tính hợp lệ của đơn hàng, chuyển trạng thái đơn sang `return_requested` và lưu bản ghi vào bảng `return_requests`.
+- **Giao diện Quản Lý Đổi Trả Admin (`/admin/orders`)**:
+  - Thêm bộ lọc tab chuyên dụng **"Đổi trả"** trong danh sách đơn hàng.
+  - Hiển thị badge trạng thái đặc biệt: `⚠️ Yêu cầu đổi trả` (nhấp nháy), `✓ Đã duyệt trả hàng`, `✕ Từ chối đổi trả`, `📦 Đã nhận hàng trả`, `💰 Đã hoàn tiền`.
+  - Trong Modal chi tiết đơn hàng:
+    - Hiển thị đầy đủ thông tin: Lý do khách chọn, mô tả chi tiết, liên kết video mở hộp mở tab mới.
+    - Cụm nút xử lý nhanh 1 chạm: **Duyệt cho phép trả hàng** hoặc **Từ chối yêu cầu** kèm ô nhập ghi chú bắt buộc của shop (`shop_note`).
+    - Nút **Xác nhận đã nhận hàng hoàn trả & Hoàn tất hoàn tiền** (`refunded`).
+  - API `/api/admin/returns/[id]/resolve` xác thực quyền admin, cập nhật trạng thái `return_requests`, trạng thái đơn hàng `orders` và ghi nhận nhật ký `order_status_history`.
+
 ## [0.4.0] - 2026-10-21 (Bảo mật & Xác thực Phân quyền Admin)
 
 ### Added

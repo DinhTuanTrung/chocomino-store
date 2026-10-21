@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AdminNav } from '@/components/AdminNav';
 import { createClient } from '@/lib/supabase/client';
-import type { Order, OrderItem, OrderStatus } from '@/types/database';
+import type { Order, OrderItem, OrderStatus, ReturnRequest } from '@/types/database';
 import {
   FileSpreadsheet,
   Package,
@@ -18,26 +18,35 @@ import {
   Eye,
   X,
   AlertTriangle,
+  RotateCcw,
+  ExternalLink,
+  Check,
+  Ban,
 } from 'lucide-react';
 
-interface OrderWithItems extends Order {
+interface OrderWithDetails extends Order {
   items: OrderItem[];
+  returns?: ReturnRequest[];
 }
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<OrderWithItems[]>([]);
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [exporting, setExporting] = useState(false);
 
   // Selected Order for Modal View
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
 
   // Action status state
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [trackingInput, setTrackingInput] = useState('');
   const [showShippingModal, setShowShippingModal] = useState(false);
+
+  // Return resolution state
+  const [returnShopNote, setReturnShopNote] = useState('');
+  const [isResolvingReturn, setIsResolvingReturn] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -45,11 +54,11 @@ export default function AdminOrdersPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from('orders')
-        .select('*, items:order_items(*)')
+        .select('*, items:order_items(*), returns:return_requests(*)')
         .order('created_at', { ascending: false });
 
       if (data && data.length > 0) {
-        setOrders(data as OrderWithItems[]);
+        setOrders(data as OrderWithDetails[]);
       } else {
         setOrders([]);
       }
@@ -99,6 +108,76 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleResolveReturn = async (
+    returnRequestId: string,
+    resolution: 'approved' | 'rejected' | 'refunded'
+  ) => {
+    if (!returnShopNote.trim()) {
+      alert('Vui lòng nhập ghi chú phản hồi của shop trước khi xử lý!');
+      return;
+    }
+
+    setIsResolvingReturn(true);
+    try {
+      const res = await fetch(`/api/admin/returns/${returnRequestId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resolution,
+          shopNote: returnShopNote.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Không thể xử lý yêu cầu đổi trả');
+        return;
+      }
+
+      alert('Đã cập nhật trạng thái yêu cầu đổi trả thành công!');
+      setReturnShopNote('');
+      // Reload orders to get fresh status and relations
+      await fetchOrders();
+
+      if (selectedOrder) {
+        const nextStatus: OrderStatus =
+          resolution === 'approved'
+            ? 'return_approved'
+            : resolution === 'rejected'
+            ? 'return_rejected'
+            : 'refunded';
+        setSelectedOrder((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: nextStatus,
+                returns: prev.returns?.map((r) =>
+                  r.id === returnRequestId
+                    ? {
+                        ...r,
+                        status:
+                          resolution === 'approved'
+                            ? 'approved'
+                            : resolution === 'rejected'
+                            ? 'rejected'
+                            : 'resolved',
+                        shop_note: returnShopNote.trim(),
+                        resolution,
+                        resolved_at: new Date().toISOString(),
+                      }
+                    : r
+                ),
+              }
+            : null
+        );
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ');
+    } finally {
+      setIsResolvingReturn(false);
+    }
+  };
+
   const handleExportSPX = async () => {
     setExporting(true);
     try {
@@ -123,7 +202,19 @@ export default function AdminOrdersPage() {
   };
 
   const filteredOrders = orders.filter((o) => {
-    if (filterStatus !== 'all' && o.status !== filterStatus) return false;
+    if (filterStatus === 'returns') {
+      const isReturn =
+        o.status === 'return_requested' ||
+        o.status === 'return_approved' ||
+        o.status === 'return_rejected' ||
+        o.status === 'returned' ||
+        o.status === 'refunded' ||
+        (o.returns && o.returns.length > 0);
+      if (!isReturn) return false;
+    } else if (filterStatus !== 'all' && o.status !== filterStatus) {
+      return false;
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchCode = o.code.toLowerCase().includes(q);
@@ -148,6 +239,16 @@ export default function AdminOrdersPage() {
         return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800">Hoàn thành</span>;
       case 'cancelled':
         return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">Đã hủy</span>;
+      case 'return_requested':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">⚠️ Yêu cầu đổi trả</span>;
+      case 'return_approved':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white">✓ Đã duyệt trả hàng</span>;
+      case 'return_rejected':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-200 text-rose-800">✕ Từ chối đổi trả</span>;
+      case 'returned':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white">📦 Đã nhận hàng trả</span>;
+      case 'refunded':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">💰 Đã hoàn tiền</span>;
       default:
         return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-800">{status}</span>;
     }
@@ -165,7 +266,7 @@ export default function AdminOrdersPage() {
               Quản lý Đơn hàng Chocomino 📦
             </h1>
             <p className="text-xs text-[#7D5C5C]">
-              Xác nhận đơn, chuyển trạng thái 1 chạm, in phiếu giao hàng và xuất file Excel mẫu SPX.
+              Xác nhận đơn, chuyển trạng thái 1 chạm, xử lý đổi trả 3 ngày, in phiếu giao hàng và xuất file Excel mẫu SPX.
             </p>
           </div>
 
@@ -215,6 +316,8 @@ export default function AdminOrdersPage() {
               { id: 'packing', label: 'Đóng gói' },
               { id: 'shipping', label: 'Đang giao' },
               { id: 'completed', label: 'Hoàn thành' },
+              { id: 'returns', label: 'Đổi trả' },
+              { id: 'cancelled', label: 'Đã hủy' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -298,7 +401,8 @@ export default function AdminOrdersPage() {
                           <Link
                             href={`/admin/orders/${ord.id}/in-phieu`}
                             className="p-1.5 rounded-lg bg-[#FFF9F6] hover:bg-[#FFE8EF] text-[#5A3A3A] transition-colors"
-                            title="In phiếu giao hàng"
+                            title="In phiếu gửi SPX"
+                            target="_blank"
                           >
                             <Printer size={15} />
                           </Link>
@@ -315,65 +419,169 @@ export default function AdminOrdersPage() {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl border border-[#FFE8EF] animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 space-y-5 shadow-2xl border border-[#FFE8EF] max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[#FFE8EF]">
               <div>
-                <span className="text-[10px] text-[#A39A9A]">Chi tiết đơn hàng</span>
-                <p className="font-title text-xl font-extrabold text-[#F9739B]">
-                  {selectedOrder.code}
+                <h3 className="font-title text-lg font-bold text-[#5A3A3A] flex items-center gap-2">
+                  Đơn hàng #{selectedOrder.code}
+                  {getStatusBadge(selectedOrder.status)}
+                </h3>
+                <p className="text-xs text-[#7D5C5C]">
+                  Ngày tạo: {new Date(selectedOrder.created_at).toLocaleString('vi-VN')}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="p-1 rounded-full text-[#A39A9A] hover:text-[#5A3A3A]"
+                className="p-2 rounded-full hover:bg-[#FFF9F6] text-[#A39A9A]"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Customer & Address Details */}
-            <div className="bg-[#FFF9F6] p-4 rounded-2xl border border-[#FFE8EF] space-y-2 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-[10px] text-[#A39A9A]">Khách hàng:</span>
-                  <p className="font-bold text-[#5A3A3A]">{selectedOrder.customer_name}</p>
+            {/* RETURN REQUEST SECTION IF ANY */}
+            {selectedOrder.returns && selectedOrder.returns.length > 0 && (
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                    <RotateCcw size={16} className="text-amber-600" />
+                    <span>Yêu cầu đổi trả hàng (Chính sách 3 ngày)</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 uppercase">
+                    {selectedOrder.returns[0].status}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-[#A39A9A]">Số điện thoại:</span>
-                  <p className="font-bold text-[#5A3A3A]">{selectedOrder.phone}</p>
+
+                <div className="space-y-1.5 text-xs text-[#5A3A3A] bg-white/70 p-3 rounded-xl border border-amber-200">
+                  <p>
+                    <span className="text-[#7D5C5C] font-semibold">Lý do đổi trả:</span>{' '}
+                    <span className="font-bold text-amber-900">{selectedOrder.returns[0].customer_reason}</span>
+                  </p>
+                  {selectedOrder.returns[0].customer_description && (
+                    <p>
+                      <span className="text-[#7D5C5C] font-semibold">Mô tả của khách:</span>{' '}
+                      {selectedOrder.returns[0].customer_description}
+                    </p>
+                  )}
+                  {selectedOrder.returns[0].video_url && (
+                    <div className="pt-1 flex items-center gap-2">
+                      <span className="text-[#7D5C5C] font-semibold">Video mở hộp bắt buộc:</span>
+                      <a
+                        href={selectedOrder.returns[0].video_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+                      >
+                        Xem video bằng chứng <ExternalLink size={13} />
+                      </a>
+                    </div>
+                  )}
+                  {selectedOrder.returns[0].shop_note && (
+                    <div className="pt-2 border-t border-amber-100 text-[11px]">
+                      <span className="text-[#7D5C5C] font-semibold">Phản hồi của shop:</span>{' '}
+                      <span className="font-bold text-[#5A3A3A]">{selectedOrder.returns[0].shop_note}</span>
+                      {selectedOrder.returns[0].resolved_at && (
+                        <span className="text-[10px] text-gray-500 block">
+                          (Đã xử lý lúc {new Date(selectedOrder.returns[0].resolved_at).toLocaleString('vi-VN')})
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
+
+                {/* Return Actions for Admin */}
+                {selectedOrder.returns[0].status === 'pending' && (
+                  <div className="space-y-2 pt-2 border-t border-amber-200">
+                    <label className="text-[11px] font-bold text-amber-900 block">
+                      Ghi chú phản hồi của shop (bắt buộc theo D2/SRS):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nhập lý do duyệt/từ chối hoặc hướng dẫn khách gửi hàng..."
+                      value={returnShopNote}
+                      onChange={(e) => setReturnShopNote(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 focus:outline-none focus:border-amber-500 bg-white"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleResolveReturn(selectedOrder.returns![0].id, 'approved')}
+                        disabled={isResolvingReturn}
+                        className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Check size={14} /> Duyệt cho phép trả hàng
+                      </button>
+                      <button
+                        onClick={() => handleResolveReturn(selectedOrder.returns![0].id, 'rejected')}
+                        disabled={isResolvingReturn}
+                        className="py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Ban size={14} /> Từ chối
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedOrder.returns[0].status === 'approved' && (
+                  <div className="space-y-2 pt-2 border-t border-amber-200">
+                    <label className="text-[11px] font-bold text-amber-900 block">
+                      Xác nhận đã nhận hàng hoàn trả & hoàn tất hoàn tiền:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ghi chú xác nhận (vd: Đã nhận bưu phẩm hoàn, đã ck lại qua STK...)"
+                      value={returnShopNote}
+                      onChange={(e) => setReturnShopNote(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 focus:outline-none focus:border-amber-500 bg-white"
+                    />
+                    <button
+                      onClick={() => handleResolveReturn(selectedOrder.returns![0].id, 'refunded')}
+                      disabled={isResolvingReturn}
+                      className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <CheckCircle2 size={14} /> Xác nhận đã nhận hàng & Hoàn tất hoàn tiền
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Customer & Shipping Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-3.5 rounded-2xl bg-[#FFF9F6] border border-[#FFE8EF] space-y-1">
+                <span className="font-bold text-[#5A3A3A] block">Thông tin khách hàng:</span>
+                <p>👤 <b>Tên:</b> {selectedOrder.customer_name}</p>
+                <p>📞 <b>SĐT:</b> {selectedOrder.phone}</p>
+                {selectedOrder.email && <p>✉️ <b>Email:</b> {selectedOrder.email}</p>}
+                {selectedOrder.note && (
+                  <p className="text-amber-800 bg-amber-50 p-2 rounded-lg mt-1 border border-amber-200">
+                    📝 <b>Ghi chú:</b> {selectedOrder.note}
+                  </p>
+                )}
               </div>
 
-              <div>
-                <span className="text-[10px] text-[#A39A9A]">Email:</span>
-                <p className="font-medium text-[#5A3A3A]">{selectedOrder.email}</p>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-[#A39A9A]">Địa chỉ nhận hàng:</span>
-                <p className="font-bold text-[#5A3A3A]">
-                  {selectedOrder.address_detail}, {selectedOrder.address_ward}, {selectedOrder.address_province}
+              <div className="p-3.5 rounded-2xl bg-[#FFF9F6] border border-[#FFE8EF] space-y-1">
+                <span className="font-bold text-[#5A3A3A] block">Địa chỉ giao hàng (SPX):</span>
+                <p className="text-[#5A3A3A]">{selectedOrder.address_detail}</p>
+                <p className="font-bold text-[#F9739B]">
+                  {selectedOrder.address_ward}, {selectedOrder.address_province}
                 </p>
-              </div>
-
-              {selectedOrder.note && (
-                <div className="pt-1 border-t border-[#FFE8EF]">
-                  <span className="text-[10px] text-[#A39A9A]">Ghi chú của khách:</span>
-                  <p className="italic text-[#7D5C5C]">{selectedOrder.note}</p>
+                <div className="pt-2">
+                  <span className="px-2 py-0.5 rounded-full bg-pink-100 text-[#E24C7C] font-bold text-[10px]">
+                    {selectedOrder.is_preorder ? '🌟 Đơn hàng Pre-order' : '⚡ Hàng có sẵn'}
+                  </span>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Product Items */}
+            {/* Order Items */}
             <div className="space-y-2">
-              <span className="text-xs font-bold text-[#7D5C5C] uppercase tracking-wider">
-                Sản phẩm đặt mua ({selectedOrder.items?.length || 0}):
+              <span className="text-xs font-bold text-[#7D5C5C] uppercase tracking-wider block">
+                Sản phẩm trong đơn ({selectedOrder.items?.length || 0})
               </span>
-              <div className="divide-y divide-[#FFE8EF] border border-[#FFE8EF] rounded-2xl overflow-hidden">
-                {selectedOrder.items?.map((it, idx) => (
-                  <div key={idx} className="p-3 flex items-center justify-between text-xs bg-white">
+              <div className="divide-y divide-[#FFE8EF] border border-[#FFE8EF] rounded-2xl p-2 bg-[#FFF9F6]/40 max-h-40 overflow-y-auto">
+                {selectedOrder.items?.map((it) => (
+                  <div key={it.id} className="py-2 flex items-center justify-between text-xs">
                     <div>
                       <p className="font-bold text-[#5A3A3A]">{it.product_name_snapshot}</p>
                       <p className="text-[11px] text-[#A39A9A]">Phân loại: {it.variant_name_snapshot}</p>
