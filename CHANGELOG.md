@@ -1,5 +1,22 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.2.0] - 2026-10-21 (Kết nối Supabase Live Data & Admin Suite)
+
+### Added
+- **Live Supabase Data Connection**:
+  - Tích hợp hàm `getProducts()` và `getCategories()` nạp dữ liệu sống từ Supabase PostgreSQL.
+  - Tối ưu tĩnh SSG (`generateStaticParams`) tự động sinh 4 trang chi tiết sản phẩm chuẩn SEO từ database.
+- **Admin Products & Inventory Management (`/admin/products`)**:
+  - Giao diện quản lý danh mục và danh sách sản phẩm với các biến thể (tên, SKU, trọng lượng, giá bán).
+  - Tính năng điều chỉnh tồn kho nhanh (+1, -1, +5, -5) qua API `/api/admin/inventory/adjust`.
+  - Tự động chuyển trạng thái `out_of_stock` khi tồn kho về 0 (trừ trường hợp pre-order) và ghi nhận lịch sử vào bảng `stock_movements`.
+- **Admin Settings Page (`/admin/settings`)**:
+  - Màn hình cấu hình thông tin cửa hàng, số điện thoại, địa chỉ kho lấy hàng SPX.
+  - Biểu phí vận chuyển động: 18.000đ (TP.HCM mới) và 22.000đ (ngoại tỉnh).
+  - Cấu hình thông số mặc định xuất file SPX.
+- **Admin Navigation (`AdminNav`)**:
+  - Thanh điều hướng admin chuyên dụng kết nối nhanh giữa Đơn hàng, Sản phẩm & Kho, Cài đặt và Web khách.
+
 ## [0.1.0] - 2026-10-21 (G0 -> Khởi tạo G1 MVP)
 
 ### Added
