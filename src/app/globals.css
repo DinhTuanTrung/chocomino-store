@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FFF9F6;
+  --foreground: #5A3A3A;
+  --primary: #F9739B;
+  --primary-hover: #E24C7C;
+  --primary-light: #FFE8EF;
+  --mint: #9ADFC8;
+  --butter: #FFD76A;
+  --muted: #A39A9A;
+  --card: #FFFFFF;
+}
+
+@theme {
+  --font-title: var(--font-baloo), cursive, sans-serif;
+  --font-sans: var(--font-nunito), -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  --color-brand-pink: #F9739B;
+  --color-brand-pink-dark: #E24C7C;
+  --color-brand-pink-light: #FFE8EF;
+  --color-brand-bg: #FFF9F6;
+  --color-brand-choco: #5A3A3A;
+  --color-brand-mint: #9ADFC8;
+  --color-brand-butter: #FFD76A;
+  --color-brand-muted: #A39A9A;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+}
