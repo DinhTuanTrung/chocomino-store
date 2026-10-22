@@ -186,3 +186,52 @@ export async function sendTelegramCancelNotification(payload: CancelOrderNotific
     return false;
   }
 }
+
+export interface PaymentSuccessNotificationPayload {
+  code: string;
+  customerName: string;
+  phone: string;
+  amount: number;
+  providerTxId: string;
+}
+
+export async function sendTelegramPaymentSuccessNotification(payload: PaymentSuccessNotificationPayload): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    return false;
+  }
+
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chocomino-store.vercel.app';
+    const adminUrl = `${baseUrl}/admin/orders`;
+
+    const message = [
+      `💰 <b>XÁC NHẬN THANH TOÁN VIETQR THÀNH CÔNG!</b>`,
+      `━━━━━━━━━━━━━━━━━━`,
+      `📦 <b>Mã đơn:</b> <code>#${payload.code}</code>`,
+      `👤 <b>Khách hàng:</b> ${payload.customerName}`,
+      `📞 <b>Số điện thoại:</b> ${payload.phone}`,
+      `💵 <b>Số tiền nhận:</b> <b>${payload.amount.toLocaleString('vi-VN')}đ</b>`,
+      `🆔 <b>Mã GD Ngân hàng:</b> <code>${payload.providerTxId}</code>`,
+      `━━━━━━━━━━━━━━━━━━`,
+      `👉 <a href="${adminUrl}">Mở Quản lý Đơn hàng</a>`,
+    ].join('\n');
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      }),
+    });
+    return true;
+  } catch (err) {
+    console.warn('[Telegram] Dispatch payment success error:', err);
+    return false;
+  }
+}
