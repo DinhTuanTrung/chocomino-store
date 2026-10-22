@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { createClient } from '@/lib/supabase/client';
 import type { Product } from '@/types/database';
 import {
   ShoppingBag,
@@ -13,6 +14,7 @@ import {
   Clock,
   ShieldCheck,
   Truck,
+  Bell,
 } from 'lucide-react';
 
 export function ProductDetailClient({ product }: { product: Product }) {
@@ -21,6 +23,23 @@ export function ProductDetailClient({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState(variants[0] || null);
   const [quantity, setQuantity] = useState(1);
   const [addedToast, setAddedToast] = useState(false);
+  const [contactInput, setContactInput] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribeBackInStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactInput.trim()) return;
+    try {
+      const supabase = createClient();
+      await supabase.from('back_in_stock_requests').insert({
+        variant_id: selectedVariant?.id,
+        contact: contactInput.trim(),
+      });
+    } catch (e) {
+      // Safe fallback
+    }
+    setSubscribed(true);
+  };
 
   const primaryImage =
     product.media?.find((m) => m.is_primary)?.url ||
@@ -194,12 +213,56 @@ export function ProductDetailClient({ product }: { product: Product }) {
                 </button>
               </div>
               {!isPreorder && !isOutOfStock && (
-                <span className="text-xs text-[#A39A9A]">
-                  Còn {selectedVariant?.stock_qty} sản phẩm
-                </span>
+                selectedVariant && selectedVariant.stock_qty <= 5 ? (
+                  <span className="text-[11px] font-bold text-[#E24C7C] bg-[#FFE8EF] px-2.5 py-1 rounded-full animate-pulse">
+                    🔥 Nhanh tay! Chỉ còn {selectedVariant.stock_qty} cái trên kệ
+                  </span>
+                ) : (
+                  <span className="text-xs text-[#A39A9A]">
+                    Còn {selectedVariant?.stock_qty} sản phẩm
+                  </span>
+                )
               )}
             </div>
           </div>
+
+          {/* Back in Stock Notification (FR-C-10) */}
+          {isOutOfStock && (
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Bell size={15} className="text-amber-600" />
+                <span className="font-bold text-xs text-[#5A3A3A]">
+                  Báo tôi khi có hàng lại (FR-C-10)
+                </span>
+              </div>
+              <p className="text-[11px] text-[#7D5C5C] leading-snug">
+                Mẫu squishy này đang tạm hết hàng. Để lại Số điện thoại hoặc Zalo để shop ưu tiên thông báo cho bạn ngay khi hàng cập bến nhé!
+              </p>
+              {subscribed ? (
+                <div className="p-2.5 rounded-xl bg-white border border-green-200 text-xs font-bold text-green-700 flex items-center gap-1.5 shadow-xs">
+                  <Check size={14} className="text-green-600" />
+                  <span>Đã ghi nhận! Shop sẽ báo cho bạn sớm nhất nhé.</span>
+                </div>
+              ) : (
+                <form onSubmit={handleSubscribeBackInStock} className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Số điện thoại / Zalo của bạn..."
+                    value={contactInput}
+                    onChange={(e) => setContactInput(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl bg-white border border-amber-300 focus:outline-none focus:border-amber-500 text-xs text-[#5A3A3A]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-colors shrink-0 cursor-pointer shadow-xs"
+                  >
+                    Đăng ký
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
 
           {/* Desktop Add to Cart Button */}
           <div className="hidden md:block pt-2">

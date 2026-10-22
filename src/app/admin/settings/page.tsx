@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AdminNav } from '@/components/AdminNav';
 import { Settings, Save, CheckCircle2, Truck, Store, CreditCard, Share2, Copy, Check, Bell } from 'lucide-react';
 
@@ -13,6 +13,14 @@ export default function AdminSettingsPage() {
 
   const [shipHcm, setShipHcm] = useState(18000);
   const [shipOther, setShipOther] = useState(22000);
+  const [freeShipThreshold, setFreeShipThreshold] = useState<number>(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chocomino_free_shipping_threshold');
+      if (stored) setFreeShipThreshold(Number(stored));
+    }
+  }, []);
 
   const [spxWeight, setSpxWeight] = useState(0.2);
   const [spxPayer, setSpxPayer] = useState('Người gửi trả');
@@ -30,6 +38,9 @@ export default function AdminSettingsPage() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chocomino_free_shipping_threshold', String(freeShipThreshold));
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -126,6 +137,23 @@ export default function AdminSettingsPage() {
                     type="number"
                     value={shipOther}
                     onChange={(e) => setShipOther(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
+                  />
+                  <span className="absolute right-4 text-xs text-[#A39A9A]">VNĐ</span>
+                </div>
+              </div>
+
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-xs font-bold text-[#7D5C5C] flex items-center justify-between">
+                  <span>Ngưỡng Miễn Phí Vận Chuyển (Freeship - FR-C-33)</span>
+                  <span className="text-[10px] text-[#A39A9A]">Nhập 0đ để tắt freeship</span>
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    value={freeShipThreshold}
+                    onChange={(e) => setFreeShipThreshold(Number(e.target.value))}
+                    placeholder="VD: 250000 (Đơn từ 250k miễn phí ship toàn quốc)"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
                   />
                   <span className="absolute right-4 text-xs text-[#A39A9A]">VNĐ</span>

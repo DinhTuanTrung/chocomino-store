@@ -64,11 +64,28 @@ export async function POST(req: NextRequest) {
       idempotencyKey,
     } = parsed.data;
 
-    // Calculate shipping fee: 18.000d for HCM, 22.000d for others
+    // Calculate shipping fee: 18.000d for HCM, 22.000d for others, 0d if freeship (FR-C-33)
     const isHCM = province.includes('Hồ Chí Minh');
-    const shippingFee = isHCM ? 18000 : 22000;
-
+    const baseShippingFee = isHCM ? 18000 : 22000;
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    const supabase = createClient();
+    let isFreeShip = false;
+    try {
+      const { data: setRow } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'free_shipping_threshold')
+        .single();
+      const threshold = Number(setRow?.value || 0);
+      if (threshold > 0 && subtotal >= threshold) {
+        isFreeShip = true;
+      }
+    } catch (e) {
+      // safe fallback
+    }
+
+    const shippingFee = isFreeShip ? 0 : baseShippingFee;
     const total = subtotal + shippingFee;
     const hasPreorder = items.some((it) => it.isPreorder);
 
@@ -83,7 +100,6 @@ export async function POST(req: NextRequest) {
     const orderCode = generateOrderCode();
 
     // Try creating via Supabase if connected
-    const supabase = createClient();
     try {
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const allValidUUIDs = items.every((i) => isUUID.test(i.variantId));

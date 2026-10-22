@@ -1,15 +1,23 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { useCart } from '@/context/CartContext';
-import { Trash2, ArrowRight, ArrowLeft, ShoppingBag, Clock, Sparkles } from 'lucide-react';
+import { Trash2, ArrowRight, ArrowLeft, ShoppingBag, Clock, Sparkles, Truck } from 'lucide-react';
 
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart, subtotal, hasPreorder } = useCart();
+  const [freeShipThreshold, setFreeShipThreshold] = useState<number>(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chocomino_free_shipping_threshold');
+      if (stored) setFreeShipThreshold(Number(stored));
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF9F6]">
@@ -60,6 +68,29 @@ export default function CartPage() {
                     <p className="text-[#7D5C5C]">
                       Đơn hàng có sản phẩm đặt trước sẽ được thanh toán chuyển khoản QR trả trước và <b>giao 1 lần khi toàn bộ sản phẩm về đủ</b>.
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Free Shipping Progress Notice (FR-C-33) */}
+              {freeShipThreshold > 0 && (
+                <div className="p-3.5 rounded-2xl bg-[#FFE8EF]/40 border border-[#FFE8EF] text-xs space-y-2">
+                  <div className="flex items-center justify-between font-bold">
+                    <span className="flex items-center gap-1.5 text-[#5A3A3A]">
+                      <Truck size={15} className="text-[#E24C7C]" />
+                      {subtotal >= freeShipThreshold
+                        ? '🎉 Chúc mừng! Đơn hàng được MIỄN PHÍ VẬN CHUYỂN toàn quốc'
+                        : `Mua thêm ${(freeShipThreshold - subtotal).toLocaleString('vi-VN')}đ để được MIỄN PHÍ VẬN CHUYỂN!`}
+                    </span>
+                    <span className="text-[11px] text-[#E24C7C]">
+                      {Math.min(100, Math.round((subtotal / freeShipThreshold) * 100))}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-[#FFE8EF] overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#F9739B] to-[#E24C7C] transition-all duration-300"
+                      style={{ width: `${Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }}
+                    />
                   </div>
                 </div>
               )}

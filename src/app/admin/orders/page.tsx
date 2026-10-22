@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AdminNav } from '@/components/AdminNav';
 import { createClient } from '@/lib/supabase/client';
 import type { Order, OrderItem, OrderStatus, ReturnRequest } from '@/types/database';
+import { ImportSpxTrackingModal } from '@/components/ImportSpxTrackingModal';
 import {
   FileSpreadsheet,
   Package,
@@ -46,6 +47,10 @@ export default function AdminOrdersPage() {
   const [isProcessingPreorders, setIsProcessingPreorders] = useState(false);
   const [trackingInput, setTrackingInput] = useState('');
   const [showShippingModal, setShowShippingModal] = useState(false);
+
+  // Batch selection & tracking modal state (FR-A-42, FR-A-45)
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [showImportTrackingModal, setShowImportTrackingModal] = useState(false);
 
   // Return resolution state
   const [returnShopNote, setReturnShopNote] = useState('');
@@ -145,6 +150,29 @@ export default function AdminOrdersPage() {
     } finally {
       setIsProcessingPreorders(false);
     }
+  };
+
+  const handleBatchPrint = () => {
+    if (selectedOrderIds.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 đơn hàng để in phiếu!');
+      return;
+    }
+    sessionStorage.setItem('chocomino_print_batch_ids', JSON.stringify(selectedOrderIds));
+    window.open('/admin/orders/in-hang-loat', '_blank');
+  };
+
+  const handleToggleSelectAll = (filteredList: Order[]) => {
+    if (selectedOrderIds.length === filteredList.length && filteredList.length > 0) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(filteredList.map((o) => o.id));
+    }
+  };
+
+  const handleToggleSelectOne = (id: string) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   };
 
   const handleResolveReturn = async (
@@ -382,6 +410,15 @@ export default function AdminOrdersPage() {
             </button>
 
             <button
+              onClick={() => setShowImportTrackingModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all shadow-xs"
+              title="Nhập mã vận đơn trả về từ SPX hàng loạt (FR-A-45)"
+            >
+              <Truck size={14} className="text-[#E24C7C]" />
+              <span>Nhập mã SPX</span>
+            </button>
+
+            <button
               onClick={handleExportCSV}
               className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all shadow-xs"
               title="Xuất danh sách đơn ra file CSV mở bằng Excel tiếng Việt"
@@ -485,6 +522,18 @@ export default function AdminOrdersPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#FFF9F6] border-b border-[#FFE8EF] text-[#7D5C5C] uppercase text-[10px]">
                   <tr>
+                    <th className="p-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={
+                          filteredOrders.length > 0 &&
+                          selectedOrderIds.length === filteredOrders.length
+                        }
+                        onChange={() => handleToggleSelectAll(filteredOrders)}
+                        className="rounded border-[#FFE8EF] text-[#E24C7C] focus:ring-[#F9739B] cursor-pointer"
+                        title="Chọn tất cả đơn hiển thị"
+                      />
+                    </th>
                     <th className="p-4">Mã đơn</th>
                     <th className="p-4">Khách hàng</th>
                     <th className="p-4">Khu vực</th>
@@ -497,6 +546,14 @@ export default function AdminOrdersPage() {
                 <tbody className="divide-y divide-[#FFE8EF]">
                   {filteredOrders.map((ord) => (
                     <tr key={ord.id} className="hover:bg-[#FFF9F6]/50 transition-colors">
+                      <td className="p-4 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.includes(ord.id)}
+                          onChange={() => handleToggleSelectOne(ord.id)}
+                          className="rounded border-[#FFE8EF] text-[#E24C7C] focus:ring-[#F9739B] cursor-pointer"
+                        />
+                      </td>
                       <td className="p-4 font-mono font-bold text-[#F9739B]">
                         {ord.code}
                       </td>
@@ -870,6 +927,36 @@ export default function AdminOrdersPage() {
           </div>
         </div>
       )}
+
+      {/* Floating Batch Action Bar (FR-A-42) */}
+      {selectedOrderIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white border border-[#FFE8EF] px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <span className="text-xs font-bold text-[#5A3A3A]">
+            Đã chọn <b className="text-[#E24C7C]">{selectedOrderIds.length}</b> đơn
+          </span>
+          <button
+            onClick={handleBatchPrint}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#E24C7C] hover:bg-[#F9739B] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Printer size={14} />
+            <span>In {selectedOrderIds.length} phiếu giao (A7/Tem/A5)</span>
+          </button>
+          <button
+            onClick={() => setSelectedOrderIds([])}
+            className="px-3 py-1.5 rounded-full text-xs font-bold text-[#7D5C5C] hover:bg-[#FFE8EF] transition-colors cursor-pointer"
+          >
+            Bỏ chọn
+          </button>
+        </div>
+      )}
+
+      {/* Import SPX Tracking Modal (FR-A-45) */}
+      <ImportSpxTrackingModal
+        isOpen={showImportTrackingModal}
+        onClose={() => setShowImportTrackingModal(false)}
+        orders={orders}
+        onSuccess={fetchOrders}
+      />
     </div>
   );
 }

@@ -36,6 +36,14 @@ export default function CheckoutPage() {
     hasPreorder ? 'bank_qr' : 'cod'
   );
   const [agreedPolicy, setAgreedPolicy] = useState(true);
+  const [freeShipThreshold, setFreeShipThreshold] = useState<number>(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chocomino_free_shipping_threshold');
+      if (stored) setFreeShipThreshold(Number(stored));
+    }
+  }, []);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -77,9 +85,11 @@ export default function CheckoutPage() {
     }
   }, [province, wardList, ward]);
 
-  // Calculate dynamic shipping fee (18.000d for HCM, 22.000d for others)
+  // Calculate dynamic shipping fee (18.000d for HCM, 22.000d for others, 0d if freeship - FR-C-33)
   const isHCM = province.includes('Hồ Chí Minh');
-  const shippingFee = isHCM ? 18000 : 22000;
+  const baseShippingFee = isHCM ? 18000 : 22000;
+  const isFreeShip = freeShipThreshold > 0 && subtotal >= freeShipThreshold;
+  const shippingFee = isFreeShip ? 0 : baseShippingFee;
   const total = subtotal + shippingFee;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -452,9 +462,17 @@ export default function CheckoutPage() {
                   <span>Tiền hàng:</span>
                   <span className="font-bold text-[#5A3A3A]">{subtotal.toLocaleString('vi-VN')}đ</span>
                 </div>
-                <div className="flex justify-between text-[#7D5C5C]">
+                <div className="flex justify-between text-[#7D5C5C] items-center">
                   <span>Phí ship SPX ({isHCM ? 'TP.HCM' : 'Ngoài TP.HCM'}):</span>
-                  <span className="font-bold text-[#E24C7C]">{shippingFee.toLocaleString('vi-VN')}đ</span>
+                  {isFreeShip ? (
+                    <span className="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[11px]">
+                      0đ (Miễn phí ship)
+                    </span>
+                  ) : (
+                    <span className="font-bold text-[#E24C7C]">
+                      {shippingFee.toLocaleString('vi-VN')}đ
+                    </span>
+                  )}
                 </div>
               </div>
 

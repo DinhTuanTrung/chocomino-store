@@ -1,5 +1,22 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.15.0] - 2026-10-22 (In Phiếu Giao Hàng Hàng Loạt, Nhập Mã Vận Đơn SPX, Miễn Phí Ship Theo Ngưỡng & Báo Khi Có Hàng)
+
+### Added
+- **In Phiếu Giao Hàng Hàng Loạt (`/admin/orders/in-hang-loat` - FR-A-42)**:
+  - Tích hợp tính năng chọn nhiều đơn hàng qua checkbox trong danh sách đơn.
+  - Thanh công cụ nổi (floating action bar) cho phép bấm **In X phiếu giao hàng** liên tục trên cùng một lệnh in, tự động phân trang theo chuẩn máy in nhãn với `@media print { page-break-after: always; }`. Hỗ trợ đầy đủ 3 khổ in: **Khổ A7 (74×105mm)**, **Tem nhiệt 100×150mm** và **Khổ A5 (148×210mm)**.
+- **Nhập Mã Vận Đơn SPX Hàng Loạt (`ImportSpxTrackingModal.tsx` - FR-A-45)**:
+  - Bổ sung nút **Nhập mã SPX** trong Quản lý đơn hàng.
+  - Hỗ trợ dán danh sách hoặc tải file `.txt`/`.csv` trả về từ SPX (ghép nối giữa Mã đơn website và Mã vận đơn SPX), tự động khớp đơn, cập nhật mã bưu gửi và chuyển trạng thái đồng loạt sang "Đang giao hàng" (`shipping`).
+- **Chính Sách Miễn Phí Vận Chuyển Theo Ngưỡng (`FR-C-33`)**:
+  - Cho phép chủ shop cấu hình *Ngưỡng miễn phí vận chuyển* trong Cài đặt shop (`/admin/settings`).
+  - Thanh tiến trình thông minh tại Giỏ hàng (`/gio-hang`) hiển thị số tiền cần mua thêm để được Freeship.
+  - Tự động miễn phí vận chuyển ($0đ$) tại màn hình Thanh toán (`/thanh-toan`) khi tổng giá trị giỏ hàng đạt ngưỡng quy định.
+- **Đăng Ký "Báo Tôi Khi Có Hàng Lại" & Cảnh Báo Tồn Kho Ít (`FR-C-10`, `FR-C-08`)**:
+  - Tại trang chi tiết sản phẩm, khi phân loại tạm hết hàng (`out_of_stock`), hệ thống hiển thị form nhập Số điện thoại/Zalo để khách hàng đăng ký nhận thông báo đợt hàng mới.
+  - Tự động hiển thị huy hiệu gây chú ý *"🔥 Nhanh tay! Chỉ còn N cái trên kệ"* khi tồn kho biến thể còn từ 5 sản phẩm trở xuống (`FR-C-08`).
+
 ## [0.14.0] - 2026-10-22 (Báo Cáo Doanh Thu & Nguồn Tiếp Thị, Nhập Sản Phẩm CSV, Xử Lý Pre-Order Hàng Loạt, Chuông Báo Đơn Mới)
 
 ### Added
