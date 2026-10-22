@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth/admin';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search');
     const limit = Math.min(100, Math.max(10, parseInt(searchParams.get('limit') || '50', 10)));
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
     let query = supabase
       .from('audit_log')
       .select('*')

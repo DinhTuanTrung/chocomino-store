@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 
 export type AuditEntity =
   | 'order'
@@ -37,7 +37,7 @@ export interface AuditLogItem {
  */
 export async function recordAuditLog(input: AuditLogInput): Promise<boolean> {
   try {
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     const actorMeta = {
       name: input.actorName || 'Trung (Chủ shop)',

@@ -29,8 +29,21 @@ export async function createClient() {
 
 export function createAdminClient() {
   const { createClient } = require('@supabase/supabase-js');
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key =
+    serviceKey && serviceKey.trim().length > 10
+      ? serviceKey.trim()
+      : anonKey?.trim() || 'placeholder';
+
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
+    key,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
   );
 }

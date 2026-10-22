@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 import { sendTelegramCancelNotification } from '@/lib/telegram';
 import { recordAuditLog } from '@/lib/audit';
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { orderCode, phone, reason } = parsed.data;
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch order
     const { data: order, error: fetchErr } = await supabase
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Update order status to cancelled
-    const { error: updateErr } = await supabase
+    const { data: updatedRows, error: updateErr } = await supabase
       .from('orders')
       .update({
         status: 'cancelled',
@@ -131,11 +131,23 @@ export async function POST(req: NextRequest) {
         payment_status: order.payment_status === 'awaiting' ? 'failed' : order.payment_status,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .select('id, status');
 
     if (updateErr) {
       return NextResponse.json(
         { success: false, message: 'Không thể cập nhật trạng thái đơn hàng: ' + updateErr.message },
+        { status: 500 }
+      );
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            'Không thể cập nhật trạng thái hủy đơn trong database. Vui lòng kiểm tra quyền RLS hoặc cấu hình CSDL.',
+        },
         { status: 500 }
       );
     }

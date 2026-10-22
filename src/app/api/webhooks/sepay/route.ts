@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 import {
   verifySePayWebhookSignature,
   extractOrderCodeFromTransferContent,
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     const transferContent = String(content || description || '');
     const accNum = String(accountNumber || 'TECHCOMBANK');
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     // 3. Idempotency check: prevent duplicate credit
     const { data: existingTx } = await supabase

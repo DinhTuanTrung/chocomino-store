@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSPXMassOrderExcel, SPXOrderExportItem } from '@/lib/spx/export';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 
 async function handleExport(req: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = createAdminClient();
     let orderIds: string[] = [];
 
     // 1. Check if specific order IDs are provided via POST body

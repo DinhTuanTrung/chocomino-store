@@ -81,7 +81,12 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  const handleUpdateStatus = async (orderId: string, nextStatus: OrderStatus, trackingCode?: string) => {
+  const handleUpdateStatus = async (
+    orderId: string,
+    nextStatus: OrderStatus,
+    trackingCode?: string,
+    customReason?: string
+  ) => {
     setIsUpdatingStatus(true);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/status`, {
@@ -90,7 +95,7 @@ export default function AdminOrdersPage() {
         body: JSON.stringify({
           nextStatus,
           trackingCode,
-          reason: `Admin cập nhật trạng thái sang ${nextStatus}`,
+          reason: customReason || `Admin cập nhật trạng thái sang ${nextStatus}`,
         }),
       });
 
@@ -109,6 +114,7 @@ export default function AdminOrdersPage() {
       }
       setShowShippingModal(false);
       setTrackingInput('');
+      await fetchOrders();
     } catch (err) {
       alert('Lỗi kết nối khi cập nhật trạng thái');
     } finally {
@@ -876,7 +882,7 @@ export default function AdminOrdersPage() {
                     onClick={() => {
                       const reason = prompt('Nhập lý do hủy đơn:');
                       if (reason) {
-                        handleUpdateStatus(selectedOrder.id, 'cancelled');
+                        handleUpdateStatus(selectedOrder.id, 'cancelled', undefined, reason);
                       }
                     }}
                     disabled={isUpdatingStatus}

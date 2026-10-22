@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminSession } from '@/lib/auth/admin';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 import { recordAuditLog } from '@/lib/audit';
 
 const userSchema = z.object({
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
     const { data: dbUsers, error } = await supabase
       .from('admin_users')
       .select('id, email, name, role, is_active, last_login, created_at')
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     const combined = [
       primaryOwner,
-      ...(dbUsers || []).filter((u) => u.email.toLowerCase() !== ownerEmail.toLowerCase()),
+      ...(dbUsers || []).filter((u: any) => u.email.toLowerCase() !== ownerEmail.toLowerCase()),
     ];
 
     return NextResponse.json({ success: true, users: combined });
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const supabase = createClient();
+      const supabase = createAdminClient();
       const { error: updateErr } = await supabase
         .from('admin_users')
         .update({ is_active: isActive, updated_at: new Date().toISOString() })
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, name, role } = parsed.data;
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     const { data: newUser, error: insertErr } = await supabase
       .from('admin_users')

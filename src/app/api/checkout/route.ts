@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 import { sendTelegramOrderNotification } from '@/lib/telegram';
 
 // Clean character set for order code (no 0/O, 1/I)
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const baseShippingFee = isHCM ? 18000 : 22000;
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
     let isFreeShip = false;
     try {
       const { data: setRow } = await supabase
