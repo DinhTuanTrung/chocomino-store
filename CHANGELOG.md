@@ -1,5 +1,21 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.13.0] - 2026-10-22 (Tích Hợp Telegram Bot Thông Báo Đơn & Đổi Trả, Khảo Sát Nguồn Khách, Xuất Đơn CSV)
+
+### Added
+- **Thông Báo Tự Động Qua Telegram Bot (`src/lib/telegram.ts` - FR-A-71, FR-A-74)**:
+  - Tích hợp dispatcher gửi thông báo thời gian thực về nhóm chat Telegram của shop khi có:
+    1. **Đơn hàng mới tạo**: Gồm mã đơn, tên khách, số điện thoại, địa chỉ nhận hàng, phương thức thanh toán (COD / VietQR), tổng tiền, nguồn traffic và link 1-click mở trang quản lý.
+    2. **Yêu cầu đổi trả mới**: Gồm mã đơn, số điện thoại, lý do hoàn trả và đường dẫn xem video khui hàng của khách.
+  - Thiết kế an toàn 100% theo tiêu chuẩn `FR-A-74`: Chạy nền không đồng bộ (asynchronous non-blocking), nếu chưa cài đặt Bot hoặc Telegram gặp sự cố mạng thì luồng đặt hàng và tạo yêu cầu của khách vẫn hoàn tất trơn tru.
+  - Bổ sung bảng hướng dẫn 4 bước kích hoạt Telegram Bot trực tiếp trong trang Cấu hình Admin (`/admin/settings`).
+- **Khảo Sát Nguồn Khách & Lưu Giữ UTM Toàn Site (`FR-C-27`, `FR-A-80`)**:
+  - Tự động bắt và lưu tham số `utm_source` vào `sessionStorage` ngay khi khách hàng bấm vào web từ bất kỳ bài đăng mạng xã hội nào (TikTok, Facebook, Instagram, Threads, Zalo).
+  - Bổ sung trường chọn *"Bạn biết Chocomino từ đâu?"* tại bước Thanh toán (`/thanh-toan`). Tự động phát hiện và điền sẵn kênh mạng xã hội kèm huy hiệu `✓ Đã nhận diện từ link`.
+- **Xuất Toàn Bộ Danh Sách Đơn Hàng Ra File CSV (`/admin/orders` - FR-A-19)**:
+  - Bổ sung nút **Xuất CSV** bên cạnh nút Xuất Excel SPX trong trang Quản lý đơn hàng.
+  - File CSV được nhúng mã định danh UTF-8 BOM (`\uFEFF`), giúp mở trực tiếp trên Microsoft Excel tiếng Việt không bị lỗi font hoặc mất dấu.
+
 ## [0.12.0] - 2026-10-22 (Bổ Sung Floating Multi-Channel Contact, Nhân Bản Sản Phẩm & Marketing UTM Links)
 
 ### Added

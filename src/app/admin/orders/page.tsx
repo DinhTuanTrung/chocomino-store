@@ -22,11 +22,13 @@ import {
   ExternalLink,
   Check,
   Ban,
+  Download,
 } from 'lucide-react';
 
 interface OrderWithDetails extends Order {
   items: OrderItem[];
   returns?: ReturnRequest[];
+  shipment_code?: string | null;
 }
 
 export default function AdminOrdersPage() {
@@ -201,6 +203,64 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!orders || orders.length === 0) {
+      alert('Chưa có dữ liệu đơn hàng để xuất CSV!');
+      return;
+    }
+
+    const headers = [
+      'Mã đơn',
+      'Khách hàng',
+      'Số điện thoại',
+      'Email',
+      'Tỉnh/Thành',
+      'Phường/Xã',
+      'Địa chỉ chi tiết',
+      'Tạm tính',
+      'Phí ship',
+      'Tổng tiền',
+      'Phương thức TT',
+      'Tình trạng TT',
+      'Trạng thái đơn',
+      'Nguồn traffic',
+      'Ghi chú',
+      'Mã vận đơn SPX',
+      'Ngày đặt',
+    ];
+
+    const rows = orders.map((o) => [
+      `"${o.code || ''}"`,
+      `"${(o.customer_name || '').replace(/"/g, '""')}"`,
+      `"${o.phone || ''}"`,
+      `"${o.email || ''}"`,
+      `"${(o.address_province || '').replace(/"/g, '""')}"`,
+      `"${(o.address_ward || '').replace(/"/g, '""')}"`,
+      `"${(o.address_detail || '').replace(/"/g, '""')}"`,
+      o.subtotal || 0,
+      o.shipping_fee || 0,
+      o.total || 0,
+      `"${o.payment_method === 'cod' ? 'COD' : 'VietQR'}"`,
+      `"${o.payment_status || ''}"`,
+      `"${o.status || ''}"`,
+      `"${o.source || 'direct'}"`,
+      `"${(o.note || '').replace(/"/g, '""')}"`,
+      `"${o.shipment_code || ''}"`,
+      `"${new Date(o.created_at).toLocaleString('vi-VN')}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Chocomino_DanhSachDonHang_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const filteredOrders = orders.filter((o) => {
     if (filterStatus === 'returns') {
       const isReturn =
@@ -280,6 +340,15 @@ export default function AdminOrdersPage() {
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               <span>Làm mới</span>
+            </button>
+
+            <button
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all shadow-xs"
+              title="Xuất danh sách đơn ra file CSV mở bằng Excel tiếng Việt"
+            >
+              <Download size={14} className="text-[#E24C7C]" />
+              <span>Xuất CSV</span>
             </button>
 
             <button

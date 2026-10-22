@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
+import { sendTelegramOrderNotification } from '@/lib/telegram';
 
 // Clean character set for order code (no 0/O, 1/I)
 const ORDER_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -142,6 +143,25 @@ export async function POST(req: NextRequest) {
     } catch (dbErr) {
       console.warn('[Checkout] Supabase call exception:', dbErr);
     }
+
+    // Dispatch Telegram Bot notification in background (FR-A-71, FR-A-74)
+    sendTelegramOrderNotification({
+      code: orderCode,
+      customerName,
+      phone,
+      address: `${addressDetail}, ${ward}, ${province}`,
+      total,
+      paymentMethod,
+      isPreorder: hasPreorder,
+      items: items.map((it) => ({
+        productName: it.productName,
+        variantName: it.variantName,
+        quantity: it.quantity,
+        price: it.price,
+      })),
+      source,
+      note,
+    }).catch((tgErr) => console.warn('[Checkout] Background Telegram error:', tgErr));
 
     return NextResponse.json({
       success: true,

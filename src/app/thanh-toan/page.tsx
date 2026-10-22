@@ -47,13 +47,17 @@ export default function CheckoutPage() {
     }
   }, [hasPreorder]);
 
-  // Autofill UTM source if present
+  // Autofill UTM source if present in URL or sessionStorage (FR-A-80)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const utm = urlParams.get('utm_source');
-      if (utm) {
-        setSource(utm);
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const utm = urlParams.get('utm_source') || sessionStorage.getItem('chocomino_utm_source');
+        if (utm) {
+          setSource(utm.toLowerCase());
+        }
+      } catch (e) {
+        // Safe catch
       }
     }
   }, []);
@@ -227,6 +231,34 @@ export default function CheckoutPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
                 />
+              </div>
+
+              {/* Bạn biết shop từ đâu? (FR-C-27) */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#7D5C5C]">
+                    Bạn biết Chocomino từ đâu? (tùy chọn)
+                  </label>
+                  {source && ['tiktok', 'facebook', 'instagram', 'threads', 'zalo'].includes(source.toLowerCase()) && (
+                    <span className="text-[10px] text-[#E24C7C] font-semibold bg-[#FFE8EF] px-2 py-0.5 rounded-full">
+                      ✓ Đã nhận diện từ link
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A] bg-white"
+                >
+                  <option value="direct">Tìm kiếm Google / Trực tiếp</option>
+                  <option value="tiktok">TikTok (Bio / Video)</option>
+                  <option value="facebook">Facebook (Fanpage / Group / Messenger)</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="threads">Threads</option>
+                  <option value="zalo">Zalo Chat</option>
+                  <option value="gioithieu">Bạn bè giới thiệu</option>
+                  <option value="Khác">Khác</option>
+                </select>
               </div>
             </div>
 

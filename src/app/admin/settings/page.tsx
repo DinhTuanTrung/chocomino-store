@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AdminNav } from '@/components/AdminNav';
-import { Settings, Save, CheckCircle2, Truck, Store, CreditCard, Share2, Copy, Check } from 'lucide-react';
+import { Settings, Save, CheckCircle2, Truck, Store, CreditCard, Share2, Copy, Check, Bell } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [shopName, setShopName] = useState('chocomino');
@@ -218,6 +218,30 @@ export default function AdminSettingsPage() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* 5. Telegram Bot Notification (FR-A-71) */}
+          <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
+                <Bell size={18} className="text-[#E24C7C]" /> Thông Báo Đơn Hàng Qua Telegram (FR-A-71)
+              </h2>
+            </div>
+            <p className="text-xs text-[#7D5C5C]">
+              Hệ thống đã tích hợp sẵn cơ chế gửi thông báo tự động về nhóm chat Telegram của chủ shop khi có: <b>Đơn hàng mới tạo</b> và <b>Yêu cầu đổi trả mới</b>.
+            </p>
+            <div className="p-4 rounded-2xl bg-[#FFF9F6] border border-[#FFE8EF] text-xs text-[#5A3A3A] space-y-2">
+              <p className="font-bold text-[#E24C7C]">Hướng dẫn kích hoạt nhận thông báo Telegram:</p>
+              <ol className="list-decimal list-inside space-y-1 text-[#7D5C5C]">
+                <li>Mở Telegram, tìm <b>@BotFather</b> và gõ lệnh <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono text-[#E24C7C]">/newbot</code> để tạo Bot riêng cho shop.</li>
+                <li>Lưu mã <b>Bot Token</b> (vd: <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono">7123456789:AA...</code>).</li>
+                <li>Tạo một nhóm chat Telegram (nhóm nhân viên hoặc riêng bạn), thêm bot vào nhóm và lấy <b>Chat ID</b> (vd: <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono">-100123456789</code>).</li>
+                <li>Thêm 2 biến môi trường vào Vercel Settings: <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono font-bold">TELEGRAM_BOT_TOKEN</code> và <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono font-bold">TELEGRAM_CHAT_ID</code>.</li>
+              </ol>
+              <p className="text-[11px] text-[#A39A9A] italic">
+                * Lưu ý: Nếu chưa cấu hình Telegram, hệ thống vẫn tạo đơn hàng bình thường và không phát sinh bất kỳ lỗi nào (theo chuẩn an toàn FR-A-74).
+              </p>
             </div>
           </div>
 

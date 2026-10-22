@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
+import { sendTelegramReturnNotification } from '@/lib/telegram';
 
 const returnSchema = z.object({
   orderCode: z.string().min(6, 'Mã đơn hàng không hợp lệ'),
@@ -117,6 +118,14 @@ export async function POST(req: NextRequest) {
       changed_by: 'customer',
       reason: `Khách gửi yêu cầu hoàn trả: ${customerReason}`,
     });
+
+    // Dispatch Telegram Bot alert for return request (FR-A-71, FR-A-74)
+    sendTelegramReturnNotification({
+      orderCode: order.code,
+      phone: cleanPhone,
+      reason: customerReason,
+      videoProofUrl: videoUrl,
+    }).catch((tgErr) => console.warn('[Return] Telegram notification error:', tgErr));
 
     return NextResponse.json({
       success: true,
