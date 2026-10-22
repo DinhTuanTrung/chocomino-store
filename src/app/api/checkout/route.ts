@@ -16,7 +16,7 @@ function generateOrderCode(): string {
 const checkoutSchema = z.object({
   customerName: z.string().min(2, 'Họ tên phải có ít nhất 2 ký tự'),
   phone: z.string().regex(/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/, 'Số điện thoại không hợp lệ'),
-  email: z.string().email('Email không đúng định dạng'),
+  email: z.string().email('Email không đúng định dạng').optional().nullable().or(z.literal('')),
   province: z.string().min(1, 'Vui lòng chọn Tỉnh/Thành'),
   ward: z.string().min(1, 'Vui lòng chọn Phường/Xã'),
   addressDetail: z.string().min(3, 'Vui lòng nhập số nhà, tên đường cụ thể'),
@@ -151,7 +151,27 @@ export async function POST(req: NextRequest) {
         });
 
         if (rpcError) {
-          console.warn('[Checkout] RPC atomic checkout warning:', rpcError.message);
+          console.warn('[Checkout] RPC atomic checkout warning, fallback to direct insert:', rpcError.message);
+          await supabase.from('orders').insert({
+            code: orderCode,
+            customer_name: customerName,
+            phone,
+            email,
+            address_province: province,
+            address_ward: ward,
+            address_detail: addressDetail,
+            note: note || null,
+            is_preorder: hasPreorder,
+            status: 'new',
+            payment_method: paymentMethod,
+            payment_status: paymentMethod === 'bank_qr' ? 'awaiting' : 'unpaid',
+            subtotal,
+            shipping_fee: shippingFee,
+            total,
+            source: source || 'direct',
+            idempotency_key: idempotencyKey || null,
+            expires_at: paymentMethod === 'bank_qr' ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
+          });
         }
       } else {
         // Fallback direct insert for mock IDs

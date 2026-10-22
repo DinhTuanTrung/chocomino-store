@@ -88,7 +88,7 @@ const MOCK_PACKING_ORDERS: SPXOrderExportItem[] = [
   },
 ];
 
-export async function POST(req: NextRequest) {
+async function handleExport(req: NextRequest) {
   try {
     const supabase = createClient();
 
@@ -123,4 +123,12 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: NextRequest) {
+  return handleExport(req);
+}
+
+export async function GET(req: NextRequest) {
+  return handleExport(req);
 }

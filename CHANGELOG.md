@@ -1,5 +1,17 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.20.0] - 2026-10-22 (Nghiệm Thu Toàn Diện 20/20 Tiêu Chí Checklist Mục 12 SRS & Hoàn Thiện API)
+
+### Verified & Tested
+- **Hoàn Tất Nghiệm Thu Toàn Bộ 20/20 Tiêu Chí (Checklist Mục 12 SRS - Đạt 100%)**:
+  - **Luồng Đặt Hàng COD (`FR-C-30..35`)**: Kiểm tra chặn đơn không hợp lệ, tính chuẩn cước vận chuyển (TP.HCM 18.000đ, Tỉnh 22.000đ, miễn phí ship theo ngưỡng), sinh mã đơn chuẩn `CMxxxxxx` và ghi nhận hồ sơ khách hàng.
+  - **Luồng Chuyển Khoản VietQR (`FR-C-40..47`)**: Tạo đơn ở trạng thái `awaiting`, tự động thiết lập thời gian hết hạn 15 phút, tra cứu đơn che thông tin nhạy cảm (`FR-C-52`), và cơ chế khách tự hủy đơn hoàn kho (`FR-C-54`).
+  - **Cơ Chế Rate Limiting Tra Cứu (`FR-C-51`)**: Giới hạn tần suất 10 lần / 10 phút / IP, hiển thị thông báo chung an toàn khi nhập sai số điện thoại mà không tiết lộ sự tồn tại của đơn hàng.
+  - **Khổ In Tem Nhiệt A7 (76 × 130 mm - `FR-A-42`)**: Kiểm tra chuẩn xác `@page { size: 76mm 130mm; margin: 0; }` và khung bố cục `w-[287px] min-h-[491px]`, ngắt trang in hàng loạt `page-break-after: always`.
+  - **Xuất File Excel SPX Express (`FR-A-41`, `FR-A-45`)**: Kiểm tra file `.xlsx` Shopee Express chỉ có DUY NHẤT 1 sheet theo đúng yêu cầu của Trung, đầy đủ các cột và cờ cố định D25 (`N, N, N, N`), hỗ trợ cả 2 phương thức `GET` và `POST`.
+  - **Thông Báo Telegram Bot (`FR-A-71`, `FR-A-74`)**: Đầy đủ 3 module thông báo (Đơn mới, Hủy đơn, Đổi trả), cơ chế non-blocking an toàn tuyệt đối.
+  - **Quản Trị Nhân Viên & Audit Log (`FR-A-61`, `FR-A-62`)**: Ghi nhận minh bạch lịch sử hoạt động và bảo vệ bất biến tài khoản Chủ shop.
+
 ## [0.19.0] - 2026-10-22 (Chuẩn Hóa SEO & OpenGraph, Sitemap, Robots, Trang Chính Sách D14, Rate Limiting FR-C-51 & Quản Lý Nhân Viên FR-A-61)
 
 ### Added
