@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { signAdminToken } from '@/lib/auth/admin';
 import { createClient } from '@/lib/supabase/client';
+import { recordAuditLog } from '@/lib/audit';
 
 const loginSchema = z.object({
   email: z.string().email('Email không đúng định dạng'),
@@ -80,6 +81,21 @@ export async function POST(req: NextRequest) {
       sameSite: 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+
+    // Record audit log for successful admin login (FR-A-62)
+    recordAuditLog({
+      action: 'admin_login',
+      entity: 'auth',
+      entityId: authenticatedUser.email,
+      actorName: authenticatedUser.name,
+      actorEmail: authenticatedUser.email,
+      actorRole: authenticatedUser.role,
+      afterData: {
+        ip: req.headers.get('x-forwarded-for') || '127.0.0.1',
+        userAgent: req.headers.get('user-agent') || 'Browser',
+        status: 'success',
+      },
     });
 
     return response;

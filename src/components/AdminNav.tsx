@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingBag, Package, Settings, ExternalLink, Sparkles, LogOut, BarChart3, Bell, Users } from 'lucide-react';
+import { ShoppingBag, Package, Settings, ExternalLink, Sparkles, LogOut, BarChart3, Bell, Users, History } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export function AdminNav() {
@@ -76,6 +76,7 @@ export function AdminNav() {
     { href: '/admin/products', label: 'Sản phẩm & Tồn kho', icon: Package },
     { href: '/admin/customers', label: 'Khách hàng', icon: Users },
     { href: '/admin/analytics', label: 'Báo cáo & Nguồn đơn', icon: BarChart3 },
+    { href: '/admin/audit-logs', label: 'Nhật ký Audit', icon: History },
     { href: '/admin/settings', label: 'Cài đặt shop', icon: Settings },
   ];
 

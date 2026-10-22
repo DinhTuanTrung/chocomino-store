@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
 import { sendTelegramCancelNotification } from '@/lib/telegram';
+import { recordAuditLog } from '@/lib/audit';
 
 const cancelSchema = z.object({
   orderCode: z.string().min(5, 'Mã đơn hàng không hợp lệ'),
@@ -160,6 +161,22 @@ export async function POST(req: NextRequest) {
       reason,
       total: order.total,
       cancelledBy: 'customer',
+    });
+
+    // 8. Record Audit Log (FR-A-62)
+    recordAuditLog({
+      action: 'order_status_cancelled',
+      entity: 'order',
+      entityId: order.code,
+      actorName: `Khách hàng (${order.customer_name})`,
+      actorEmail: 'customer@chocomino.local',
+      actorRole: 'customer',
+      beforeData: { status: order.status },
+      afterData: {
+        status: 'cancelled',
+        reason,
+        cancelledBy: 'customer',
+      },
     });
 
     return NextResponse.json({

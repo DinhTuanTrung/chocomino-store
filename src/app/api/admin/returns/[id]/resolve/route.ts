@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
+import { getAdminSession } from '@/lib/auth/admin';
+import { recordAuditLog } from '@/lib/audit';
 
 const resolveSchema = z.object({
   resolution: z.enum(['approved', 'rejected', 'refunded']),
@@ -92,6 +94,27 @@ export async function POST(
       to_status: nextOrderStatus,
       changed_by: 'admin',
       reason: `Shop ${resolution === 'approved' ? 'duyệt' : resolution === 'rejected' ? 'từ chối' : 'hoàn tất'} đổi trả. Ghi chú: ${shopNote}`,
+    });
+
+    // 6. Record Audit Log (FR-A-62)
+    const session = await getAdminSession();
+    recordAuditLog({
+      action: `resolve_return_${resolution}`,
+      entity: 'return_request',
+      entityId: String(returnRequestId),
+      actorName: session?.name || 'Trung (Chủ shop)',
+      actorEmail: session?.email || 'admin@chocomino.local',
+      actorRole: session?.role || 'owner',
+      beforeData: {
+        orderId,
+        previousStatus: returnReq.status,
+      },
+      afterData: {
+        orderId,
+        resolution,
+        shopNote,
+        nextOrderStatus,
+      },
     });
 
     return NextResponse.json({

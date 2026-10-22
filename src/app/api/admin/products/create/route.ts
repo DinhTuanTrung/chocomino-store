@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getAdminSession } from '@/lib/auth/admin';
+import { recordAuditLog } from '@/lib/audit';
 
 const createProductSchema = z.object({
   name: z.string().min(2, 'Tên sản phẩm phải có ít nhất 2 ký tự'),
@@ -163,6 +165,24 @@ export async function POST(req: NextRequest) {
         is_primary: true,
       });
     }
+
+    // Record Audit Log (FR-A-62)
+    const session = await getAdminSession();
+    recordAuditLog({
+      action: 'create_product',
+      entity: 'product',
+      entityId: String(productId),
+      actorName: session?.name || 'Trung (Chủ shop)',
+      actorEmail: session?.email || 'admin@chocomino.local',
+      actorRole: session?.role || 'owner',
+      afterData: {
+        name,
+        slug: prodData.slug,
+        isFeatured,
+        variantCount: variants.length,
+        variants: variants.map((v) => ({ name: v.name, price: v.price, stockQty: v.stockQty })),
+      },
+    });
 
     return NextResponse.json({
       success: true,

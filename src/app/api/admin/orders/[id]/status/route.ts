@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
+import { getAdminSession } from '@/lib/auth/admin';
+import { recordAuditLog } from '@/lib/audit';
 import type { OrderStatus } from '@/types/database';
 
 const VALID_STATUSES: OrderStatus[] = [
@@ -107,6 +109,23 @@ export async function POST(
         status: 'shipping',
       });
     }
+
+    // 6. Record Audit Log (FR-A-62)
+    const session = await getAdminSession();
+    recordAuditLog({
+      action: `order_status_${nextStatus}`,
+      entity: 'order',
+      entityId: order.code,
+      actorName: session?.name || 'Trung (Chủ shop)',
+      actorEmail: session?.email || 'admin@chocomino.local',
+      actorRole: session?.role || 'owner',
+      beforeData: { status: currentStatus },
+      afterData: {
+        status: nextStatus,
+        reason: reason || null,
+        trackingCode: trackingCode || null,
+      },
+    });
 
     return NextResponse.json({
       success: true,

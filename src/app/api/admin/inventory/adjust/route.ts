@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
+import { getAdminSession } from '@/lib/auth/admin';
+import { recordAuditLog } from '@/lib/audit';
 
 const adjustSchema = z.object({
   variantId: z.string().uuid('ID biến thể không hợp lệ'),
@@ -69,6 +71,30 @@ export async function POST(req: NextRequest) {
       change_qty: delta,
       reason,
       note: note || `Điều chỉnh tồn kho bởi Admin (${delta > 0 ? '+' : ''}${delta})`,
+    });
+
+    // 4. Record Audit Log (FR-A-62)
+    const session = await getAdminSession();
+    recordAuditLog({
+      action: 'adjust_inventory',
+      entity: 'product_variant',
+      entityId: variantId,
+      actorName: session?.name || 'Trung (Chủ shop)',
+      actorEmail: session?.email || 'admin@chocomino.local',
+      actorRole: session?.role || 'owner',
+      beforeData: {
+        variantName: variant.name,
+        stockQty: variant.stock_qty,
+        status: variant.status,
+      },
+      afterData: {
+        variantName: variant.name,
+        stockQty: newStock,
+        status: newStatus,
+        delta,
+        reason,
+        note: note || null,
+      },
     });
 
     return NextResponse.json({

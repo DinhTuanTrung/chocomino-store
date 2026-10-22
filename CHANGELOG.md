@@ -1,5 +1,22 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.18.0] - 2026-10-22 (Phân Hệ Nhật Ký Hoạt Động Hệ Thống Audit Logs FR-A-62)
+
+### Added
+- **Phân Hệ Nhật Ký Hoạt Động Chuyên Sâu (`/admin/audit-logs` - FR-A-62)**:
+  - Bổ sung menu **Nhật ký Audit** trên thanh điều hướng [`AdminNav`](file:///d:/website_chocomino/src/components/AdminNav.tsx).
+  - Tích hợp module lõi [`recordAuditLog`](file:///d:/website_chocomino/src/lib/audit.ts) ghi nhận minh bạch mọi thao tác quản trị vào bảng `audit_log` của cơ sở dữ liệu Supabase.
+  - Tự động ghi log chi tiết cho 5 phân hệ cốt lõi:
+    - **Đơn hàng (`order`)**: Ghi log khi đổi trạng thái đơn (xác nhận, đóng gói, giao hàng, hoàn thành, hủy đơn) kèm trạng thái cũ và mới ([`/api/admin/orders/[id]/status`](file:///d:/website_chocomino/src/app/api/admin/orders/[id]/status/route.ts) & [`/api/orders/cancel`](file:///d:/website_chocomino/src/app/api/orders/cancel/route.ts)).
+    - **Tồn kho biến thể (`product_variant`)**: Ghi log khi nhân viên/chủ shop điều chỉnh tồn kho, số lượng thay đổi (`delta`), lý do và số tồn kho trước/sau ([`/api/admin/inventory/adjust`](file:///d:/website_chocomino/src/app/api/admin/inventory/adjust/route.ts)).
+    - **Sản phẩm (`product`)**: Ghi log khi tạo mới sản phẩm hoặc biến thể ([`/api/admin/products/create`](file:///d:/website_chocomino/src/app/api/admin/products/create/route.ts)).
+    - **Khiếu nại đổi trả (`return_request`)**: Ghi log khi duyệt, từ chối hoặc hoàn tiền khiếu nại đổi trả kèm ghi chú của shop ([`/api/admin/returns/[id]/resolve`](file:///d:/website_chocomino/src/app/api/admin/returns/[id]/resolve/route.ts)).
+    - **Bảo mật xác thực (`auth`)**: Ghi log mỗi phiên đăng nhập quản trị thành công kèm địa chỉ IP và User-Agent ([`/api/admin/auth/login`](file:///d:/website_chocomino/src/app/api/admin/auth/login/route.ts)).
+  - Giao diện tra cứu chuyên nghiệp tại [`/admin/audit-logs`](file:///d:/website_chocomino/src/app/admin/audit-logs/page.tsx):
+    - 4 thẻ KPI tổng quan (Tổng sự kiện, Thao tác đơn, Kho & sản phẩm, Lượt đăng nhập).
+    - Bộ lọc theo phân hệ (`order`, `product_variant`, `product`, `return_request`, `auth`, `customer`) và ô tìm kiếm tức thì theo mã đơn / ID / hành động.
+    - Hộp thoại xem chi tiết hiển thị trực quan dữ liệu Trước (`before_data`) và Sau (`after_data`) khi có sự thay đổi.
+
 ## [0.17.0] - 2026-10-22 (Khách Hàng Tự Hủy Đơn, Mở Lại Mã QR Thanh Toán & Báo Cáo Telegram Hủy Đơn)
 
 ### Added

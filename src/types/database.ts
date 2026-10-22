@@ -157,6 +157,17 @@ export interface Customer {
   updated_at: string;
 }
 
+export interface AuditLog {
+  id: string;
+  user_id: string | null;
+  action: string;
+  entity: string;
+  entity_id: string | null;
+  before_data: any;
+  after_data: any;
+  created_at: string;
+}
+
 export interface CartItem {
   variantId: string;
   productId: string;
