@@ -23,13 +23,23 @@ export function Footer() {
           <div className="space-y-3">
             <h4 className="font-bold text-sm text-[#5A3A3A]">Chính sách & Hỗ trợ</h4>
             <ul className="space-y-2 text-xs text-[#7D5C5C]">
-              <li className="flex items-center gap-1.5">
-                <RefreshCw size={12} className="text-[#9ADFC8]" />
-                <span>Đổi trả trong 3 ngày (kèm video khui hàng)</span>
+              <li>
+                <Link
+                  href="/chinh-sach"
+                  className="flex items-center gap-1.5 hover:text-[#F9739B] transition-colors"
+                >
+                  <RefreshCw size={12} className="text-[#9ADFC8]" />
+                  <span>Đổi trả 3 ngày (kèm video khui)</span>
+                </Link>
               </li>
-              <li className="flex items-center gap-1.5">
-                <ShieldCheck size={12} className="text-[#9ADFC8]" />
-                <span>Bảo mật thông tin khách hàng</span>
+              <li>
+                <Link
+                  href="/chinh-sach"
+                  className="flex items-center gap-1.5 hover:text-[#F9739B] transition-colors"
+                >
+                  <ShieldCheck size={12} className="text-[#9ADFC8]" />
+                  <span>Bảo mật dữ liệu sau 90 ngày</span>
+                </Link>
               </li>
               <li>
                 <Link href="/tra-cuu" className="hover:text-[#F9739B] transition-colors">

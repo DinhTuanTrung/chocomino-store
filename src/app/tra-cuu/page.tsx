@@ -61,42 +61,23 @@ function OrderLookupContent() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const codeClean = orderCode.trim().toUpperCase();
-      const phoneClean = phone.trim().replace(/^\+84/, '0');
-
-      const { data: dbOrder, error: dbErr } = await supabase
-        .from('orders')
-        .select('*, items:order_items(*), return:return_requests(*), shipment:shipments(*)')
-        .eq('code', codeClean)
-        .single();
-
-      if (dbErr || !dbOrder) {
-        setError('Không tìm thấy thông tin đơn hàng khớp với mã đơn và số điện thoại đã nhập.');
-        setLoading(false);
-        return;
-      }
-
-      // Verify phone match (last 9 digits)
-      const orderPhoneClean = dbOrder.phone.trim().replace(/^\+84/, '0');
-      if (!orderPhoneClean.endsWith(phoneClean.slice(-9))) {
-        setError('Không tìm thấy thông tin đơn hàng khớp với mã đơn và số điện thoại đã nhập.');
-        setLoading(false);
-        return;
-      }
-
-      // Calculate 3-day return eligibility
-      const isCompleted = dbOrder.status === 'completed';
-      const completedTime = new Date(dbOrder.updated_at).getTime();
-      const isWithin3Days = Date.now() - completedTime <= 3 * 24 * 60 * 60 * 1000;
-      const hasExistingReturn = dbOrder.return && dbOrder.return.length > 0;
-
-      setOrderResult({
-        ...dbOrder,
-        isEligibleForReturn: isCompleted && isWithin3Days && !hasExistingReturn,
-        returnDetails: hasExistingReturn ? dbOrder.return[0] : null,
-        trackingCode: dbOrder.shipment?.[0]?.tracking_code || null,
+      const res = await fetch('/api/orders/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderCode: orderCode.trim(),
+          phone: phone.trim(),
+        }),
       });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || 'Không tìm thấy thông tin đơn hàng khớp với mã đơn và số điện thoại đã nhập.');
+        setLoading(false);
+        return;
+      }
+
+      setOrderResult(data.order);
     } catch (err) {
       setError('Đã có lỗi xảy ra trong quá trình tra cứu. Vui lòng thử lại!');
     } finally {

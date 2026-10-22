@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AdminNav } from '@/components/AdminNav';
-import { Settings, Save, CheckCircle2, Truck, Store, CreditCard, Share2, Copy, Check, Bell } from 'lucide-react';
+import { Settings, Save, CheckCircle2, Truck, Store, CreditCard, Share2, Copy, Check, Bell, Users, UserPlus, Shield, Ban, UserCheck, RefreshCw } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [shopName, setShopName] = useState('chocomino');
@@ -24,6 +24,88 @@ export default function AdminSettingsPage() {
 
   const [spxWeight, setSpxWeight] = useState(0.2);
   const [spxPayer, setSpxPayer] = useState('Người gửi trả');
+
+  // Staff Account Management State (FR-A-61)
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'staff' | 'owner'>('staff');
+  const [isSubmittingUser, setIsSubmittingUser] = useState(false);
+  const [userMsg, setUserMsg] = useState('');
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.users || []);
+      }
+    } catch (e) {
+      // silent
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleToggleUserActive = async (email: string, currentActive: boolean) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_active',
+          email,
+          isActive: !currentActive,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Lỗi khi cập nhật trạng thái');
+        return;
+      }
+      fetchUsers();
+    } catch {
+      alert('Lỗi kết nối khi cập nhật tài khoản');
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingUser(true);
+    setUserMsg('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newUserName.trim(),
+          email: newUserEmail.trim(),
+          role: newUserRole,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Không thể tạo tài khoản');
+        return;
+      }
+      setShowAddUserModal(false);
+      setNewUserName('');
+      setNewUserEmail('');
+      setUserMsg('Đã tạo tài khoản nhân viên thành công!');
+      fetchUsers();
+    } catch {
+      alert('Lỗi kết nối máy chủ');
+    } finally {
+      setIsSubmittingUser(false);
+    }
+  };
 
   const [saved, setSaved] = useState(false);
   const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
@@ -272,6 +354,157 @@ export default function AdminSettingsPage() {
               </p>
             </div>
           </div>
+
+          {/* 6. Staff & Admin Accounts Management (FR-A-61) */}
+          <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
+                <Users size={18} className="text-[#F9739B]" /> Quản lý Tài khoản Quản trị & Nhân viên (FR-A-61)
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowAddUserModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFE8EF] text-[#E24C7C] font-bold text-xs hover:bg-[#F9739B] hover:text-white transition-all shadow-xs cursor-pointer self-start sm:self-auto"
+              >
+                <UserPlus size={14} /> Thêm nhân viên mới
+              </button>
+            </div>
+            <p className="text-xs text-[#7D5C5C]">
+              Chủ shop có quyền tạo hoặc vô hiệu hóa tài khoản nhân viên. Hệ thống đảm bảo <b>luôn duy trì ít nhất 1 tài khoản Chủ shop</b>.
+            </p>
+
+            {userMsg && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                <CheckCircle2 size={15} /> <span>{userMsg}</span>
+              </div>
+            )}
+
+            <div className="border border-[#FFE8EF] rounded-2xl overflow-hidden divide-y divide-[#FFE8EF] text-xs">
+              {users.map((u, i) => (
+                <div key={i} className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#5A3A3A]">{u.name}</span>
+                      <span
+                        className={`px-2 py-0.2 rounded-full text-[10px] font-bold ${
+                          u.role === 'owner' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {u.role === 'owner' ? '👑 Chủ shop' : 'Nhân viên'}
+                      </span>
+                      {u.is_root && (
+                        <span className="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-700 text-[9px] font-bold">
+                          Mặc định
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-mono text-[#7D5C5C] block">{u.email}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        u.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                      }`}
+                    >
+                      {u.is_active ? <UserCheck size={12} /> : <Ban size={12} />}
+                      {u.is_active ? 'Đang hoạt động' : 'Đã vô hiệu'}
+                    </span>
+
+                    {!u.is_root && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleUserActive(u.email, u.is_active)}
+                        className={`px-3 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                          u.is_active
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        }`}
+                      >
+                        {u.is_active ? 'Khóa tài khoản' : 'Kích hoạt lại'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Add User Modal */}
+          {showAddUserModal && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-[#FFE8EF] animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-3">
+                  <h3 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-1.5">
+                    <UserPlus size={18} className="text-[#F9739B]" /> Thêm tài khoản nhân viên mới
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddUserModal(false)}
+                    className="p-1 rounded-full text-[#A39A9A] hover:text-[#5A3A3A]"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="space-y-1">
+                    <label className="font-bold text-[#7D5C5C]">Tên nhân viên (*)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="VD: Nguyễn Văn A (Soát đơn)"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-[#7D5C5C]">Email đăng nhập (*)</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="nhanvien@chocomino.local"
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-[#7D5C5C]">Vai trò (*)</label>
+                    <select
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none bg-white font-medium"
+                    >
+                      <option value="staff">Nhân viên (Xem và xử lý đơn hàng, đóng gói SPX)</option>
+                      <option value="owner">Chủ shop (Toàn quyền quản trị)</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddUserModal(false)}
+                      className="px-4 py-2 rounded-xl font-bold text-[#7D5C5C] hover:bg-[#FFE8EF]"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateUser}
+                      disabled={isSubmittingUser || !newUserName || !newUserEmail}
+                      className="px-5 py-2 rounded-full bg-[#F9739B] text-white font-title font-bold hover:bg-[#E24C7C] transition-all disabled:bg-[#A39A9A]"
+                    >
+                      {isSubmittingUser ? 'Đang tạo...' : 'Tạo tài khoản'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Save Button */}
           <div className="flex justify-end">

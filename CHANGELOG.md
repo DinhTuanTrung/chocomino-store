@@ -1,5 +1,26 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.19.0] - 2026-10-22 (Chuẩn Hóa SEO & OpenGraph, Sitemap, Robots, Trang Chính Sách D14, Rate Limiting FR-C-51 & Quản Lý Nhân Viên FR-A-61)
+
+### Added
+- **Chuẩn Hóa SEO & Dynamic OpenGraph Meta Tags Cho Mạng Xã Hội (Section 9.2 & G3)**:
+  - Tích hợp hàm `generateMetadata` trong [`/san-pham/[slug]`](file:///d:/website_chocomino/src/app/san-pham/[slug]/page.tsx) tạo động tiêu đề, mô tả, ảnh minh họa sản phẩm và Twitter Card khi chia sẻ liên kết qua TikTok, Facebook, Zalo, Threads.
+  - Tích hợp dữ liệu có cấu trúc **Schema.org Product & AggregateOffer JSON-LD** hỗ trợ Google Rich Snippets hiển thị giá, tình trạng còn hàng và thương hiệu trực tiếp trên kết quả tìm kiếm Google.
+  - Tự động sinh file [`sitemap.xml`](file:///d:/website_chocomino/src/app/sitemap.ts) và cấu hình điều hướng [`robots.txt`](file:///d:/website_chocomino/src/app/robots.ts) theo chuẩn Next.js App Router (chặn cào dữ liệu vùng `/admin/` và `/api/`).
+- **Trang Chính Sách Bán Hàng & Dịch Vụ Chuẩn D14/D2 (`/chinh-sach`)**:
+  - Xây dựng trang [`/chinh-sach`](file:///d:/website_chocomino/src/app/chinh-sach/page.tsx) quy định chi tiết:
+    - Chính sách đổi trả 3 ngày kèm video khui hàng không cắt ghép (shop chịu 100% phí ship 2 chiều nếu lỗi từ xưởng/tiệm/vận chuyển).
+    - Biểu phí và thời gian giao hàng SPX Express toàn quốc (HCM 18k, tỉnh 22k).
+    - Chính sách hủy đơn hàng mới và cam kết bảo mật thông tin tự động ẩn danh hóa sau 90 ngày (D17).
+  - Cập nhật liên kết chính sách trực tiếp từ chân trang [`Footer.tsx`](file:///d:/website_chocomino/src/components/Footer.tsx).
+- **Cơ Chế Giới Hạn Tần Suất Tra Cứu (Rate Limiting - FR-C-51 & FR-C-52)**:
+  - Xây dựng API trung gian [`/api/orders/lookup`](file:///d:/website_chocomino/src/app/api/orders/lookup/route.ts) áp dụng cơ chế giới hạn 10 lần thử / 10 phút / IP nhằm ngăn chặn hành vi dò quét đơn hàng tự động (brute-force).
+  - Áp dụng thông báo chung "Không tìm thấy thông tin đơn hàng" dù sai mã đơn hay sai số điện thoại, tuyệt đối không tiết lộ đơn hàng có tồn tại hay không.
+  - Tự động che thông tin nhạy cảm (SĐT chỉ hiện 3 số cuối, địa chỉ chỉ hiện Phường/Tỉnh).
+- **Phân Hệ Quản Lý Tài Khoản Nhân Viên & Phân Quyền (`FR-A-61`)**:
+  - Bổ sung mục quản lý tài khoản quản trị trong Cài đặt shop ([`/admin/settings`](file:///d:/website_chocomino/src/app/admin/settings/page.tsx)) và API [`/api/admin/users`](file:///d:/website_chocomino/src/app/api/admin/users/route.ts).
+  - Cho phép Chủ shop (`owner`) tạo tài khoản nhân viên mới (`role: staff`), khóa / mở khóa tài khoản và thiết lập cơ chế bất biến: **luôn duy trì ít nhất 1 tài khoản Chủ shop**.
+
 ## [0.18.0] - 2026-10-22 (Phân Hệ Nhật Ký Hoạt Động Hệ Thống Audit Logs FR-A-62)
 
 ### Added
