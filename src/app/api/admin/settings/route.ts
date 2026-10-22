@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const supabase = createAdminClient();
 
-    const allowedKeys = ['bank_account', 'shop_info', 'shipping', 'spx_config'];
+    const allowedKeys = ['bank_account', 'shop_info', 'shipping', 'spx_config', 'contact'];
     const updates = Object.keys(body).filter((k) => allowedKeys.includes(k));
 
     for (const key of updates) {

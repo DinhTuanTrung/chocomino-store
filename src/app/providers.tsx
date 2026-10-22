@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { CartProvider } from '@/context/CartContext';
+import { SettingsProvider } from '@/context/SettingsContext';
 
 function UtmCapture() {
   useEffect(() => {
@@ -22,9 +23,11 @@ function UtmCapture() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <CartProvider>
-      <UtmCapture />
-      {children}
-    </CartProvider>
+    <SettingsProvider>
+      <CartProvider>
+        <UtmCapture />
+        {children}
+      </CartProvider>
+    </SettingsProvider>
   );
 }

@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { Order, OrderItem } from '@/types/database';
 import { Printer, ArrowLeft } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 interface OrderWithItems extends Order {
   items: OrderItem[];
 }
 
 export default function BatchPrintLabelsPage() {
+  const { shopInfo } = useSettings();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [printSize, setPrintSize] = useState<'a7' | 'thermal_100x150' | 'a5'>('a7');
@@ -222,11 +224,11 @@ export default function BatchPrintLabelsPage() {
                   <span className="font-bold text-[8px] uppercase tracking-wider block text-gray-600">
                     Người gửi:
                   </span>
-                  <p className="font-bold">chocomino shop</p>
+                  <p className="font-bold">{shopInfo.name || 'chocomino shop'}</p>
                   <p className="text-gray-700 leading-tight">
-                    Đ. Số 2/38/32 Bình Đường 1, Dĩ An, TP.HCM
+                    {shopInfo.address || 'Đ. Số 2/38/32 Bình Đường 1, Dĩ An, TP.HCM'}
                   </p>
-                  <p className="font-mono font-bold">Hotline: 0900000000</p>
+                  <p className="font-mono font-bold">Hotline: {shopInfo.hotline || shopInfo.phone || '0900000000'}</p>
                 </div>
 
                 {/* Receiver */}

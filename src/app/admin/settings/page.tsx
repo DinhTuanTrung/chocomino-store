@@ -17,6 +17,12 @@ import {
   UserPlus,
   Ban,
   UserCheck,
+  MessageCircle,
+  Phone,
+  Send,
+  Mail,
+  FileText,
+  Eye,
 } from 'lucide-react';
 
 export default function AdminSettingsPage() {
@@ -24,6 +30,17 @@ export default function AdminSettingsPage() {
   const [shopPhone, setShopPhone] = useState('0900000000');
   const [pickupAddress, setPickupAddress] = useState(
     'Đ. Số 2/38/32 Bình Đường 1, Khu Phố, Dĩ An, Hồ Chí Minh, Việt Nam'
+  );
+  const [shopEmail, setShopEmail] = useState('contact@chocomino.vn');
+  const [shopDescription, setShopDescription] = useState(
+    'Tiệm đồ chơi squishy mềm mịn, bồng bềnh, chậm tăng chuẩn xịn. Mang lại niềm vui và cảm giác thư giãn cho bạn mỗi ngày!'
+  );
+
+  // Customer Contact Channels & Floating Widget
+  const [zaloUrl, setZaloUrl] = useState('https://zalo.me/0900000000');
+  const [facebookUrl, setFacebookUrl] = useState('https://m.me/chocomino.squishy');
+  const [supportMessage, setSupportMessage] = useState(
+    'Cần tư vấn mẫu squishy bóp êm hoặc hỗ trợ đơn hàng? Nhắn tin ngay cho tụi mình nhé:'
   );
 
   // Bank Account & VietQR Settings (FR-C-41)
@@ -69,6 +86,11 @@ export default function AdminSettingsPage() {
             if (parsed.shop_info?.name) setShopName(parsed.shop_info.name);
             if (parsed.shop_info?.phone) setShopPhone(parsed.shop_info.phone);
             if (parsed.shop_info?.address) setPickupAddress(parsed.shop_info.address);
+            if (parsed.shop_info?.email) setShopEmail(parsed.shop_info.email);
+            if (parsed.shop_info?.description) setShopDescription(parsed.shop_info.description);
+            if (parsed.shop_info?.zalo_url) setZaloUrl(parsed.shop_info.zalo_url);
+            if (parsed.shop_info?.facebook_url) setFacebookUrl(parsed.shop_info.facebook_url);
+            if (parsed.shop_info?.support_message) setSupportMessage(parsed.shop_info.support_message);
             if (parsed.bank_account?.bank_name) setBankName(parsed.bank_account.bank_name);
             if (parsed.bank_account?.account_number) setBankAccount(parsed.bank_account.account_number);
             if (parsed.bank_account?.account_holder) setAccountHolder(parsed.bank_account.account_holder);
@@ -94,6 +116,11 @@ export default function AdminSettingsPage() {
             if (s.shop_info.name) setShopName(s.shop_info.name);
             if (s.shop_info.phone) setShopPhone(s.shop_info.phone);
             if (s.shop_info.address) setPickupAddress(s.shop_info.address);
+            if (s.shop_info.email) setShopEmail(s.shop_info.email);
+            if (s.shop_info.description) setShopDescription(s.shop_info.description);
+            if (s.shop_info.zalo_url) setZaloUrl(s.shop_info.zalo_url);
+            if (s.shop_info.facebook_url) setFacebookUrl(s.shop_info.facebook_url);
+            if (s.shop_info.support_message) setSupportMessage(s.shop_info.support_message);
           }
           if (s.shipping) {
             if (s.shipping.ship_hcm !== undefined) setShipHcm(Number(s.shipping.ship_hcm));
@@ -210,6 +237,12 @@ export default function AdminSettingsPage() {
           name: shopName.trim(),
           phone: shopPhone.trim(),
           address: pickupAddress.trim(),
+          email: shopEmail.trim(),
+          description: shopDescription.trim(),
+          hotline: shopPhone.trim(),
+          zalo_url: zaloUrl.trim(),
+          facebook_url: facebookUrl.trim(),
+          support_message: supportMessage.trim(),
         },
         bank_account: {
           bank_name: bankName,
@@ -232,6 +265,7 @@ export default function AdminSettingsPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('chocomino_shop_settings', JSON.stringify(payload));
         localStorage.setItem('chocomino_free_shipping_threshold', String(freeShipThreshold));
+        window.dispatchEvent(new Event('chocomino_settings_updated'));
       }
 
       const res = await fetch('/api/admin/settings', {
@@ -264,14 +298,14 @@ export default function AdminSettingsPage() {
             <Settings className="text-[#F9739B]" size={28} /> Cài đặt Cửa hàng & Vận hành
           </h1>
           <p className="text-xs text-[#7D5C5C]">
-            Tùy chỉnh thông tin cửa hàng, tài khoản ngân hàng VietQR, biểu phí ship và thông số xuất đơn SPX Express.
+            Tùy chỉnh thông tin cửa hàng, kênh liên hệ CSKH nổi, tài khoản ngân hàng VietQR, biểu phí ship và thông số xuất đơn SPX Express.
           </p>
         </div>
 
         {saved && (
           <div className="p-4 rounded-2xl bg-[#FFE8EF] border border-[#F9739B]/30 text-xs font-bold text-[#E24C7C] flex items-center gap-2 animate-fadeIn">
             <CheckCircle2 size={16} />
-            <span>Đã lưu cài đặt cấu hình thành công vào hệ thống!</span>
+            <span>Đã lưu cài đặt cấu hình thành công vào hệ thống! Giao diện khách hàng tự động cập nhật ngay.</span>
           </div>
         )}
 
@@ -279,7 +313,7 @@ export default function AdminSettingsPage() {
           {/* 1. Shop Info */}
           <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
             <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
-              <Store size={18} className="text-[#F9739B]" /> Thông tin Cửa hàng
+              <Store size={18} className="text-[#F9739B]" /> Thông tin Cửa hàng & Chân trang
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -294,24 +328,177 @@ export default function AdminSettingsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#7D5C5C]">Số điện thoại liên hệ</label>
+                <label className="text-xs font-bold text-[#7D5C5C]">Số điện thoại chính / Hotline</label>
                 <input
                   type="text"
                   value={shopPhone}
                   onChange={(e) => setShopPhone(e.target.value)}
+                  placeholder="VD: 0900000000"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A] font-mono font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#7D5C5C]">Email liên hệ</label>
+                <input
+                  type="email"
+                  value={shopEmail}
+                  onChange={(e) => setShopEmail(e.target.value)}
+                  placeholder="VD: contact@chocomino.vn"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#7D5C5C]">Địa chỉ lấy hàng SPX & Hiển thị trên Footer</label>
+                <input
+                  type="text"
+                  value={pickupAddress}
+                  onChange={(e) => setPickupAddress(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-[#7D5C5C]">Địa chỉ lấy hàng SPX Express</label>
-              <input
-                type="text"
-                value={pickupAddress}
-                onChange={(e) => setPickupAddress(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
+              <label className="text-xs font-bold text-[#7D5C5C]">Lời giới thiệu / Slogan chân trang (Footer)</label>
+              <textarea
+                rows={2}
+                value={shopDescription}
+                onChange={(e) => setShopDescription(e.target.value)}
+                placeholder="Giới thiệu ngắn hiển thị ở chân trang web..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A] resize-none"
               />
+            </div>
+          </div>
+
+          {/* 2. Customer Contact Channels & Floating Support Widget */}
+          <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#FFE8EF] pb-3">
+              <div>
+                <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
+                  <MessageCircle size={18} className="text-[#E24C7C]" /> Kênh Liên hệ CSKH (Hộp chat nổi & Nút liên hệ)
+                </h2>
+                <p className="text-xs text-[#7D5C5C]">
+                  Tùy chỉnh thông tin trong bong bóng chat nổi góc dưới màn hình. Khách bấm vào sẽ chuyển thẳng đến Zalo, Messenger hoặc gọi điện thoại.
+                </p>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0 self-start sm:self-center">
+                ● Tự động cập nhật phía web user
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Input Fields (7 cols) */}
+              <div className="lg:col-span-7 space-y-3.5">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#7D5C5C] flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-md bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">Z</span>
+                    Link hoặc Số điện thoại Zalo
+                  </label>
+                  <input
+                    type="text"
+                    value={zaloUrl}
+                    onChange={(e) => setZaloUrl(e.target.value)}
+                    placeholder="VD: 0900000000 hoặc https://zalo.me/0900000000"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
+                  />
+                  <p className="text-[10px] text-[#A39A9A]">
+                    Có thể điền số điện thoại (hệ thống tự tạo link <code className="text-[#E24C7C]">https://zalo.me/...</code>) hoặc link Zalo OA.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#7D5C5C] flex items-center gap-1.5">
+                    <Send size={14} className="text-[#9333EA]" />
+                    Link Fanpage / Facebook Messenger
+                  </label>
+                  <input
+                    type="text"
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    placeholder="VD: https://m.me/chocomino.squishy hoặc https://facebook.com/..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
+                  />
+                  <p className="text-[10px] text-[#A39A9A]">
+                    Link dẫn thẳng tới tin nhắn Fanpage Messenger (khuyên dùng dạng <code className="text-[#E24C7C]">https://m.me/ten_fanpage</code>).
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#7D5C5C]">Lời chào / Tin nhắn tư vấn trong hộp chat</label>
+                  <textarea
+                    rows={2}
+                    value={supportMessage}
+                    onChange={(e) => setSupportMessage(e.target.value)}
+                    placeholder="VD: Cần tư vấn mẫu squishy bóp êm hoặc hỗ trợ đơn hàng? Nhắn tin ngay cho tụi mình nhé:"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A] resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Live Preview (5 cols) */}
+              <div className="lg:col-span-5 bg-[#FFF9F6] p-4 rounded-2xl border border-[#FFE8EF] space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#7D5C5C]">
+                  <Eye size={14} className="text-[#E24C7C]" />
+                  <span>Xem trước Hộp thoại Hỗ trợ CSKH</span>
+                </div>
+
+                <div className="rounded-2xl bg-white border border-[#FFE8EF] p-3 shadow-md space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                      <span className="font-title text-xs font-bold text-[#5A3A3A]">
+                        Hỗ trợ {shopName || 'Chocomino'} 💬
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-[#7D5C5C] leading-snug">
+                    {supportMessage || 'Cần tư vấn mẫu squishy bóp êm hoặc hỗ trợ đơn hàng? Nhắn tin ngay cho tụi mình nhé:'}
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-700">
+                      <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                        Zalo
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-[11px] truncate">Chat qua Zalo</p>
+                        <p className="text-[9px] text-blue-600/80 truncate">
+                          {zaloUrl ? (zaloUrl.startsWith('http') ? zaloUrl : `https://zalo.me/${zaloUrl}`) : 'Chưa nhập'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-pink-50/70 border border-[#FFE8EF] text-[#E24C7C]">
+                      <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#F9739B] to-[#9333EA] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                        <Send size={11} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-[11px] truncate">Chat Facebook</p>
+                        <p className="text-[9px] text-[#7D5C5C] truncate">
+                          {facebookUrl || 'Chưa nhập link'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-800">
+                      <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                        <Phone size={11} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-[11px] truncate">Gọi Hotline</p>
+                        <p className="text-[9px] text-amber-700/80 truncate">
+                          {shopPhone || '0900000000'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

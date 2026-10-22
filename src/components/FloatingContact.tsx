@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageCircle, X, Phone, Send } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 export function FloatingContact() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { shopInfo } = useSettings();
 
   // Do not render floating contact inside admin dashboard
   if (pathname.startsWith('/admin')) {
@@ -17,9 +19,25 @@ export function FloatingContact() {
   const isProductDetail = pathname.startsWith('/san-pham/');
   const bottomClass = isProductDetail ? 'bottom-20 md:bottom-6' : 'bottom-6';
 
-  const shopPhone = process.env.NEXT_PUBLIC_SHOP_PHONE || '0900000000';
-  const zaloUrl = `https://zalo.me/${shopPhone}`;
-  const messengerUrl = 'https://m.me/chocomino.squishy';
+  const hotline = shopInfo.hotline || shopInfo.phone || '0900000000';
+  const cleanPhone = hotline.replace(/[^0-9+]/g, '');
+
+  // Format Zalo URL: if user enters phone number or full link
+  let zaloUrl = shopInfo.zalo_url?.trim() || `https://zalo.me/${cleanPhone}`;
+  if (zaloUrl && !zaloUrl.startsWith('http://') && !zaloUrl.startsWith('https://')) {
+    zaloUrl = `https://zalo.me/${zaloUrl.replace(/[^0-9]/g, '')}`;
+  }
+
+  // Messenger / Fanpage URL
+  let messengerUrl = shopInfo.facebook_url?.trim() || 'https://m.me/chocomino.squishy';
+  if (messengerUrl && !messengerUrl.startsWith('http://') && !messengerUrl.startsWith('https://')) {
+    messengerUrl = `https://${messengerUrl}`;
+  }
+
+  const supportMessage =
+    shopInfo.support_message?.trim() ||
+    'Cần tư vấn mẫu squishy bóp êm hoặc hỗ trợ đơn hàng? Nhắn tin ngay cho tụi mình nhé:';
+  const shopDisplayName = shopInfo.name || 'Chocomino';
 
   return (
     <div className={`fixed ${bottomClass} right-4 md:right-6 z-40 print:hidden`}>
@@ -30,7 +48,7 @@ export function FloatingContact() {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
               <span className="font-title text-sm font-bold text-[#5A3A3A]">
-                Hỗ trợ Chocomino 💬
+                Hỗ trợ {shopDisplayName} 💬
               </span>
             </div>
             <button
@@ -42,7 +60,7 @@ export function FloatingContact() {
           </div>
 
           <p className="text-[11px] text-[#7D5C5C] leading-snug">
-            Cần tư vấn mẫu squishy bóp êm hoặc hỗ trợ đơn hàng? Nhắn tin ngay cho tụi mình nhé:
+            {supportMessage}
           </p>
 
           <div className="space-y-2">
@@ -80,7 +98,7 @@ export function FloatingContact() {
 
             {/* Hotline Call */}
             <a
-              href={`tel:${shopPhone}`}
+              href={`tel:${cleanPhone}`}
               className="flex items-center gap-3 p-2.5 rounded-2xl bg-amber-50/70 hover:bg-amber-100 text-amber-800 transition-colors border border-amber-200"
             >
               <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -88,7 +106,7 @@ export function FloatingContact() {
               </div>
               <div className="text-left flex-1 min-w-0">
                 <p className="font-bold text-xs">Gọi Hotline</p>
-                <p className="text-[10px] text-amber-700/80">{shopPhone}</p>
+                <p className="text-[10px] text-amber-700/80">{hotline}</p>
               </div>
             </a>
           </div>
