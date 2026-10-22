@@ -93,6 +93,17 @@ export async function generateSPXMassOrderExcel(
     orderSequence++;
   }
 
+  // Remove all instructions, sample, and reference sheets so ONLY the orders sheet remains
+  const sheetsToRemove = workbook.worksheets.filter(
+    (ws) => ws.name !== 'Tạo đơn (địa chỉ mới)'
+  );
+  for (const ws of sheetsToRemove) {
+    workbook.removeWorksheet(ws.id);
+  }
+
+  // Ensure the single orders sheet is active and selected
+  worksheet.views = [{ state: 'normal', activeCell: 'A1', showGridLines: true }];
+
   const arrayBuffer = await workbook.xlsx.writeBuffer();
   const buffer = Buffer.from(arrayBuffer);
 

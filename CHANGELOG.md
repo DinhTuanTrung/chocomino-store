@@ -1,5 +1,13 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.11.0] - 2026-10-22 (Tối Giản Hóa File Xuất Excel SPX — Duy Nhất 1 Sheet Đơn Hàng)
+
+### Enhanced
+- **Tối ưu hóa chức năng Xuất Excel SPX (`/api/admin/spx-export`)**:
+  - Tự động loại bỏ hoàn toàn tất cả các sheet hướng dẫn thừa của phôi SPX (`Hướng dẫn tạo đơn`, `Ví dụ đơn mẫu`, `Tạo đơn (địa chỉ cũ)`, danh sách tỉnh/huyện cũ...).
+  - File Excel xuất ra chỉ chứa **duy nhất 1 sheet** chứa toàn bộ các đơn hàng cần giao (`Tạo đơn (địa chỉ mới)`).
+  - Tự động kích hoạt view mặc định tại ô A1, giảm dung lượng file xuống gần 50%, giúp chủ shop mở file lên là thấy ngay danh sách đơn hàng mà không cần chuyển đổi qua lại giữa các sheet hướng dẫn.
+
 ## [0.10.0] - 2026-10-22 (Bổ Sung In Phiếu Khổ A7 & Xuất File Excel SPX Động)
 
 ### Added & Enhanced
