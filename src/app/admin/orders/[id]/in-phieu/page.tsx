@@ -70,7 +70,7 @@ export default function PrintShippingLabelPage({
       <style jsx global>{`
         @media print {
           @page {
-            size: ${printSize === 'a7' ? '74mm 105mm' : printSize === 'a5' ? 'A5' : '100mm 150mm'};
+            size: ${printSize === 'a7' ? '76mm 130mm' : printSize === 'a5' ? 'A5' : '100mm 150mm'};
             margin: 0;
           }
           body {
@@ -98,7 +98,7 @@ export default function PrintShippingLabelPage({
               printSize === 'a7' ? 'bg-[#E24C7C] text-white shadow-xs' : 'text-gray-600 hover:text-black'
             }`}
           >
-            Khổ A7 (74×105mm)
+            Khổ A7 (76×130mm)
           </button>
           <button
             onClick={() => setPrintSize('thermal_100x150')}
@@ -131,7 +131,7 @@ export default function PrintShippingLabelPage({
       <div
         className={`mx-auto bg-white border-2 border-black shadow-md print:shadow-none print:border-black print:m-0 ${
           printSize === 'a7'
-            ? 'w-[280px] min-h-[396px] p-2.5 space-y-1.5 text-[9px] leading-tight'
+            ? 'w-[287px] min-h-[491px] p-3 space-y-2 text-[10px] leading-tight'
             : printSize === 'thermal_100x150'
             ? 'w-[380px] min-h-[570px] p-4 space-y-3 text-[11px]'
             : 'w-[560px] min-h-[790px] p-6 space-y-4 text-xs'

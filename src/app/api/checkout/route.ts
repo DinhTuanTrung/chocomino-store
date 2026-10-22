@@ -97,6 +97,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if customer phone is blocked (FR-A-33)
+    try {
+      const { data: custRow } = await supabase
+        .from('customers')
+        .select('is_blocked')
+        .eq('phone', phone)
+        .single();
+      if (custRow?.is_blocked) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Số điện thoại này hiện đang bị tạm khóa đặt hàng. Vui lòng liên hệ hotline shop để được hỗ trợ!',
+          },
+          { status: 403 }
+        );
+      }
+    } catch (e) {
+      // safe fallback
+    }
+
     const orderCode = generateOrderCode();
 
     // Try creating via Supabase if connected
@@ -155,6 +175,22 @@ export async function POST(req: NextRequest) {
           idempotency_key: idempotencyKey || null,
           expires_at: paymentMethod === 'bank_qr' ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
         });
+      }
+
+      // Upsert customer CRM record (FR-A-30)
+      try {
+        await supabase.from('customers').upsert(
+          {
+            phone,
+            name: customerName,
+            email: email || null,
+            first_source: source || 'direct',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'phone' }
+        );
+      } catch (crmErr) {
+        console.warn('[Checkout] Customer CRM upsert error:', crmErr);
       }
     } catch (dbErr) {
       console.warn('[Checkout] Supabase call exception:', dbErr);

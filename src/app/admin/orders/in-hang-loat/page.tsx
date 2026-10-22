@@ -87,7 +87,7 @@ export default function BatchPrintLabelsPage() {
       <style jsx global>{`
         @media print {
           @page {
-            size: ${printSize === 'a7' ? '74mm 105mm' : printSize === 'a5' ? 'A5' : '100mm 150mm'};
+            size: ${printSize === 'a7' ? '76mm 130mm' : printSize === 'a5' ? 'A5' : '100mm 150mm'};
             margin: 0;
           }
           body {
@@ -122,7 +122,7 @@ export default function BatchPrintLabelsPage() {
               printSize === 'a7' ? 'bg-[#E24C7C] text-white shadow-xs' : 'text-gray-600 hover:text-black'
             }`}
           >
-            Khổ A7 (74×105mm)
+            Khổ A7 (76×130mm)
           </button>
           <button
             onClick={() => setPrintSize('thermal_100x150')}
@@ -163,7 +163,7 @@ export default function BatchPrintLabelsPage() {
               key={order.id}
               className={`batch-label-item mx-auto bg-white border border-gray-400 p-4 shadow-md ${
                 printSize === 'a7'
-                  ? 'max-w-[74mm] min-h-[105mm] text-[10px]'
+                  ? 'max-w-[76mm] min-h-[130mm] text-[10px]'
                   : printSize === 'a5'
                   ? 'max-w-[148mm] min-h-[210mm] text-xs'
                   : 'max-w-[100mm] min-h-[150mm] text-[11px]'

@@ -939,7 +939,7 @@ export default function AdminOrdersPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#E24C7C] hover:bg-[#F9739B] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
           >
             <Printer size={14} />
-            <span>In {selectedOrderIds.length} phiếu giao (A7/Tem/A5)</span>
+            <span>In {selectedOrderIds.length} phiếu giao (A7 76×130/Tem/A5)</span>
           </button>
           <button
             onClick={() => setSelectedOrderIds([])}

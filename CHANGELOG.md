@@ -1,5 +1,21 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.16.0] - 2026-10-22 (Chuẩn Hóa Khổ In Nhiệt A7 76×130mm & Phân Hệ Quản Lý Khách Hàng CRM)
+
+### Enhanced
+- **Chuẩn Hóa Khổ In Tem Nhiệt A7 (76 × 130 mm)**:
+  - Điều chỉnh toàn diện kích thước in khổ A7 sang **76 × 130 mm** cho cả trang In phiếu đơn lẻ ([`/admin/orders/[id]/in-phieu`](file:///d:/website_chocomino/src/app/admin/orders/[id]/in-phieu/page.tsx)) và In phiếu hàng loạt ([`/admin/orders/in-hang-loat`](file:///d:/website_chocomino/src/app/admin/orders/in-hang-loat/page.tsx)).
+  - Đồng bộ cấu hình in ấn `@page { size: 76mm 130mm; margin: 0; }` và khung bố cục tương thích tỷ lệ tem cuộn bưu phẩm TMĐT SPX.
+
+### Added
+- **Phân Hệ Quản Lý Khách Hàng Chuyên Sâu (`/admin/customers` - FR-A-30..34)**:
+  - Bổ sung menu **Khách hàng** trên thanh điều hướng Admin.
+  - Tự động đồng bộ và tổng hợp hồ sơ CRM theo Số điện thoại: tên, SĐT, email, số lượng đơn đã đặt, tổng chi tiêu tích lũy và nguồn tiếp thị đầu tiên (`FR-A-30, FR-A-31`).
+  - Hộp thoại xem chi tiết lịch sử tất cả các đơn hàng khách từng đặt và trạng thái từng đơn (`FR-A-32`).
+  - Cho phép chủ shop ghi chú nội bộ về khách hàng (lưu vào database) (`FR-A-32`).
+  - Cảnh báo khách có lịch sử hủy/hoàn cao và tích hợp nút Chặn khách bom hàng (`is_blocked` - `FR-A-33`).
+  - Tự động chặn tạo đơn tại `/api/checkout` nếu số điện thoại nằm trong danh sách bị khóa.
+
 ## [0.15.0] - 2026-10-22 (In Phiếu Giao Hàng Hàng Loạt, Nhập Mã Vận Đơn SPX, Miễn Phí Ship Theo Ngưỡng & Báo Khi Có Hàng)
 
 ### Added
