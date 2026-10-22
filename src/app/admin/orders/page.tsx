@@ -43,6 +43,7 @@ export default function AdminOrdersPage() {
 
   // Action status state
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isProcessingPreorders, setIsProcessingPreorders] = useState(false);
   const [trackingInput, setTrackingInput] = useState('');
   const [showShippingModal, setShowShippingModal] = useState(false);
 
@@ -107,6 +108,42 @@ export default function AdminOrdersPage() {
       alert('Lỗi kết nối khi cập nhật trạng thái');
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleBatchPreorderArrived = async () => {
+    const pendingPreorders = orders.filter(
+      (o) => o.is_preorder && o.status === 'new'
+    );
+
+    if (pendingPreorders.length === 0) {
+      alert('Không có đơn hàng Pre-order nào đang chờ hàng về!');
+      return;
+    }
+
+    const confirmed = confirm(
+      `Xác nhận hàng Pre-order đã về kho?\n\nHệ thống sẽ chuyển đồng loạt ${pendingPreorders.length} đơn hàng sang trạng thái "Đã xác nhận" để sẵn sàng in phiếu & đóng gói giao SPX.`
+    );
+    if (!confirmed) return;
+
+    setIsProcessingPreorders(true);
+    try {
+      for (const ord of pendingPreorders) {
+        await fetch(`/api/admin/orders/${ord.id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nextStatus: 'confirmed',
+            reason: 'Hàng Pre-order đã về kho (Xử lý hàng loạt FR-A-18)',
+          }),
+        });
+      }
+      alert(`Đã chuyển thành công ${pendingPreorders.length} đơn Pre-order sang "Đã xác nhận"!`);
+      await fetchOrders();
+    } catch (err) {
+      alert('Đã có lỗi trong quá trình cập nhật trạng thái hàng loạt');
+    } finally {
+      setIsProcessingPreorders(false);
     }
   };
 
@@ -271,6 +308,8 @@ export default function AdminOrdersPage() {
         o.status === 'refunded' ||
         (o.returns && o.returns.length > 0);
       if (!isReturn) return false;
+    } else if (filterStatus === 'preorder') {
+      if (!o.is_preorder) return false;
     } else if (filterStatus !== 'all' && o.status !== filterStatus) {
       return false;
     }
@@ -381,6 +420,7 @@ export default function AdminOrdersPage() {
             {[
               { id: 'all', label: 'Tất cả' },
               { id: 'new', label: 'Đơn mới' },
+              { id: 'preorder', label: '⏳ Chờ hàng về' },
               { id: 'confirmed', label: 'Xác nhận' },
               { id: 'packing', label: 'Đóng gói' },
               { id: 'shipping', label: 'Đang giao' },
@@ -402,6 +442,33 @@ export default function AdminOrdersPage() {
             ))}
           </div>
         </div>
+
+        {/* Pre-order Batch Action Banner (FR-A-18) */}
+        {filterStatus === 'preorder' && (
+          <div className="bg-[#FFF9F6] border border-[#FFD76A] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#FFD76A]/40 text-[#856404] flex items-center justify-center font-bold shrink-0">
+                <Clock size={18} />
+              </div>
+              <div>
+                <p className="font-bold text-xs text-[#5A3A3A]">
+                  Quản lý đơn đặt trước (Pre-order - FR-A-18)
+                </p>
+                <p className="text-[11px] text-[#7D5C5C]">
+                  Có {orders.filter((o) => o.is_preorder && o.status === 'new').length} đơn Pre-order đang chờ hàng về kho. Khi hàng cập bến, bấm nút bên phải để kích hoạt chuyển đồng loạt sang xác nhận đóng gói.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleBatchPreorderArrived}
+              disabled={isProcessingPreorders || orders.filter((o) => o.is_preorder && o.status === 'new').length === 0}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FFD76A] to-[#F9739B] text-[#5A3A3A] font-bold text-xs shadow-sm hover:opacity-95 disabled:opacity-50 transition-all shrink-0 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <Package size={14} />
+              <span>{isProcessingPreorders ? 'Đang cập nhật...' : 'Hàng đã về: Xác nhận hàng loạt'}</span>
+            </button>
+          </div>
+        )}
 
         {/* Orders Table */}
         <div className="bg-white rounded-3xl border border-[#FFE8EF] overflow-hidden shadow-xs">

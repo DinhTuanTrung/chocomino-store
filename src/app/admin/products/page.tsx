@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { AdminNav } from '@/components/AdminNav';
 import { createClient } from '@/lib/supabase/client';
 import type { Product, Category, ProductVariant } from '@/types/database';
+import { CsvProductImportModal } from '@/components/CsvProductImportModal';
 import {
   Package,
   Plus,
@@ -20,6 +21,7 @@ import {
   Trash2,
   Image as ImageIcon,
   Copy,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface NewVariantForm {
@@ -44,6 +46,7 @@ export default function AdminProductsPage() {
   // Create Product Modal State
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCsvModal, setShowCsvModal] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductCategoryId, setNewProductCategoryId] = useState('');
   const [newProductDesc, setNewProductDesc] = useState('');
@@ -278,6 +281,15 @@ export default function AdminProductsPage() {
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               <span>Làm mới</span>
+            </button>
+
+            <button
+              onClick={() => setShowCsvModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all shadow-xs"
+              title="Nhập sản phẩm hàng loạt từ file CSV (FR-A-08)"
+            >
+              <FileSpreadsheet size={15} className="text-[#E24C7C]" />
+              <span>Nhập từ CSV</span>
             </button>
 
             <button
@@ -768,6 +780,14 @@ export default function AdminProductsPage() {
           </div>
         </div>
       )}
+
+      {/* Bulk CSV Import Modal (FR-A-08) */}
+      <CsvProductImportModal
+        isOpen={showCsvModal}
+        onClose={() => setShowCsvModal(false)}
+        categories={categories}
+        onSuccess={fetchLiveProducts}
+      />
     </div>
   );
 }

@@ -1,5 +1,26 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.14.0] - 2026-10-22 (Báo Cáo Doanh Thu & Nguồn Tiếp Thị, Nhập Sản Phẩm CSV, Xử Lý Pre-Order Hàng Loạt, Chuông Báo Đơn Mới)
+
+### Added
+- **Trang Báo Cáo Doanh Thu & Tiếp Thị Mạng Xã Hội (`/admin/analytics` - FR-A-50..55)**:
+  - Bổ sung trang Báo cáo chuyên sâu dành riêng cho chủ shop với các thẻ KPI cốt lõi: Doanh thu thực nhận (đã trừ hủy/hoàn), Số đơn thành công, Giá trị đơn trung bình (AOV), Tỷ lệ hoàn/hủy.
+  - Bộ lọc thời gian linh hoạt: Hôm nay, 7 ngày qua, Tháng này, Toàn thời gian.
+  - Phân bổ doanh thu chi tiết giữa hai phương thức thanh toán: Tiền mặt COD vs Chuyển khoản VietQR.
+  - Thống kê tỷ lệ đóng góp đơn và doanh thu theo nguồn traffic (TikTok, Facebook, Threads, Instagram, Zalo, Google/Trực tiếp).
+  - Bảng cảnh báo hàng tồn kho thấp (`stock_qty <= 5`) kèm nút điều hướng nhập thêm tồn kho nhanh chóng.
+- **Nhập Sản Phẩm Hàng Loạt Từ File CSV (`CsvProductImportModal.tsx` - FR-A-08)**:
+  - Bổ sung nút **Nhập từ CSV** và modal nhập hàng loạt trong trang Quản lý sản phẩm (`/admin/products`).
+  - Hỗ trợ nút tải file mẫu CSV tiếng Việt chuẩn UTF-8 BOM (`Mau_Nhap_SanPham_Chocomino.csv`) có sẵn ví dụ cho sản phẩm đơn và sản phẩm nhiều biến thể.
+  - Tự động phân tích cú pháp (CSV parser), nhóm các dòng cùng tên sản phẩm thành các biến thể của cùng một món, xem trước bảng dữ liệu và thanh tiến trình (progress bar) khi tạo sản phẩm vào Supabase.
+- **Quản Lý Pre-Order Chuyên Sâu & Nút "Hàng Đã Về" Hàng Loạt (`/admin/orders` - FR-A-18)**:
+  - Bổ sung tab bộ lọc riêng **⏳ Chờ hàng về** trong màn hình Quản lý đơn hàng.
+  - Tích hợp banner thông báo số đơn Pre-order đang chờ và nút hành động hàng loạt: *"Hàng đã về: Xác nhận hàng loạt"* có hộp thoại xác nhận an toàn trước khi chuyển đồng loạt sang trạng thái `confirmed`.
+- **Chuông Báo Đơn Mới & Huy Hiệu Đếm Đơn Chờ Xử Lý (`AdminNav.tsx` - FR-A-73)**:
+  - Header Admin tự động polling kiểm tra số đơn mới (`new`) và đơn yêu cầu đổi trả (`return_requested`).
+  - Hiển thị huy hiệu số lượng đơn chờ xử lý nổi bật trên tab "Đơn hàng & SPX".
+  - Tự động phát âm báo chuông nhẹ nhàng (sử dụng Web Audio API tổng hợp, không cần tải file mp3 ngoài) khi phát sinh đơn hàng mới trong lúc chủ shop đang mở trang.
+
 ## [0.13.0] - 2026-10-22 (Tích Hợp Telegram Bot Thông Báo Đơn & Đổi Trả, Khảo Sát Nguồn Khách, Xuất Đơn CSV)
 
 ### Added

@@ -1,17 +1,80 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingBag, Package, Settings, ExternalLink, Sparkles, LogOut, User } from 'lucide-react';
+import { ShoppingBag, Package, Settings, ExternalLink, Sparkles, LogOut, BarChart3, Bell } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const previousCountRef = useRef<number | null>(null);
+
+  // Play notification chime using Web Audio API (FR-A-73)
+  const playChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch (e) {
+      // Audio context might be restricted before user gesture
+    }
+  };
+
+  // Poll for new/pending orders and return requests (FR-A-73)
+  useEffect(() => {
+    const supabase = createClient();
+    let isMounted = true;
+
+    const checkPendingOrders = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['new', 'return_requested']);
+
+        if (!error && count !== null && isMounted) {
+          if (previousCountRef.current !== null && count > previousCountRef.current) {
+            playChime();
+          }
+          previousCountRef.current = count;
+          setPendingCount(count);
+        }
+      } catch (e) {
+        // Safe catch
+      }
+    };
+
+    checkPendingOrders();
+    const interval = setInterval(checkPendingOrders, 30000); // Poll every 30s
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const navItems = [
-    { href: '/admin/orders', label: 'Đơn hàng & SPX', icon: ShoppingBag },
+    { href: '/admin/orders', label: 'Đơn hàng & SPX', icon: ShoppingBag, badge: pendingCount },
     { href: '/admin/products', label: 'Sản phẩm & Tồn kho', icon: Package },
+    { href: '/admin/analytics', label: 'Báo cáo & Nguồn đơn', icon: BarChart3 },
     { href: '/admin/settings', label: 'Cài đặt shop', icon: Settings },
   ];
 
@@ -48,7 +111,7 @@ export function AdminNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full transition-colors ${
+                className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-full transition-colors ${
                   isActive
                     ? 'bg-[#FFE8EF] text-[#E24C7C]'
                     : 'text-[#7D5C5C] hover:bg-[#FFF9F6]'
@@ -56,6 +119,11 @@ export function AdminNav() {
               >
                 <Icon size={15} />
                 <span>{item.label}</span>
+                {item.badge && item.badge > 0 ? (
+                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-[#E24C7C] text-white text-[10px] font-bold animate-pulse">
+                    {item.badge}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
