@@ -245,13 +245,19 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleExportSPX = async () => {
+  const handleExportSPX = async (overrideIds?: string[]) => {
+    const idsToExport = overrideIds && overrideIds.length > 0 ? overrideIds : selectedOrderIds;
     setExporting(true);
     try {
       const res = await fetch('/api/admin/spx-export', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: idsToExport }),
       });
-      if (!res.ok) throw new Error('Xuất file thất bại');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || 'Xuất file thất bại');
+      }
 
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -261,15 +267,20 @@ export default function AdminOrdersPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (err) {
-      alert('Không thể tạo file Excel SPX. Vui lòng kiểm tra lại!');
+    } catch (err: any) {
+      alert(err?.message || 'Không thể tạo file Excel SPX. Vui lòng kiểm tra lại!');
     } finally {
       setExporting(false);
     }
   };
 
   const handleExportCSV = () => {
-    if (!orders || orders.length === 0) {
+    const ordersToExport =
+      selectedOrderIds.length > 0
+        ? orders.filter((o) => selectedOrderIds.includes(o.id))
+        : orders;
+
+    if (!ordersToExport || ordersToExport.length === 0) {
       alert('Chưa có dữ liệu đơn hàng để xuất CSV!');
       return;
     }
@@ -294,7 +305,7 @@ export default function AdminOrdersPage() {
       'Ngày đặt',
     ];
 
-    const rows = orders.map((o) => [
+    const rows = ordersToExport.map((o) => [
       `"${o.code || ''}"`,
       `"${(o.customer_name || '').replace(/"/g, '""')}"`,
       `"${o.phone || ''}"`,
@@ -428,12 +439,17 @@ export default function AdminOrdersPage() {
             </button>
 
             <button
-              onClick={handleExportSPX}
+              onClick={() => handleExportSPX()}
               disabled={exporting}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#E24C7C] text-white font-title text-xs font-bold shadow-md hover:bg-[#F9739B] transition-all disabled:bg-[#A39A9A]"
+              title={selectedOrderIds.length > 0 ? `Xuất Excel ${selectedOrderIds.length} đơn đang chọn` : "Xuất Excel SPX các đơn hàng"}
             >
               <FileSpreadsheet size={16} />
-              {exporting ? 'Đang xuất...' : 'Xuất Excel SPX'}
+              {exporting
+                ? 'Đang xuất...'
+                : selectedOrderIds.length > 0
+                ? `Xuất Excel SPX (${selectedOrderIds.length} đơn)`
+                : 'Xuất Excel SPX'}
             </button>
           </div>
         </div>
@@ -940,6 +956,14 @@ export default function AdminOrdersPage() {
           >
             <Printer size={14} />
             <span>In {selectedOrderIds.length} phiếu giao (A7 76×130/Tem/A5)</span>
+          </button>
+          <button
+            onClick={() => handleExportSPX(selectedOrderIds)}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50"
+          >
+            <FileSpreadsheet size={14} />
+            <span>{exporting ? 'Đang xuất...' : `Xuất Excel SPX (${selectedOrderIds.length} đơn)`}</span>
           </button>
           <button
             onClick={() => setSelectedOrderIds([])}

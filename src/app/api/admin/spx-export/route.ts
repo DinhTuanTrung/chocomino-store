@@ -2,110 +2,72 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateSPXMassOrderExcel, SPXOrderExportItem } from '@/lib/spx/export';
 import { createClient } from '@/lib/supabase/client';
 
-// Sample fallback orders if shop has no confirmed/packing orders yet
-const MOCK_PACKING_ORDERS: SPXOrderExportItem[] = [
-  {
-    id: 'ord-101',
-    code: 'CM7K2P9Q',
-    customer_id: 'cust-1',
-    customer_name: 'Nguyễn Thị Hồng',
-    phone: '0987654321',
-    email: 'hong@example.com',
-    address_province: 'Thành phố Hồ Chí Minh',
-    address_ward: 'Phường Dĩ An',
-    address_detail: '38/32 Đường Số 2',
-    note: 'Giao giờ hành chính',
-    is_preorder: false,
-    status: 'packing',
-    payment_method: 'cod',
-    payment_status: 'unpaid',
-    subtotal: 90000,
-    shipping_fee: 18000,
-    total: 108000,
-    source: 'TikTok',
-    cancel_reason: null,
-    internal_note: null,
-    expires_at: null,
-    idempotency_key: null,
-    anonymized_at: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    items: [
-      {
-        id: 'item-1',
-        order_id: 'ord-101',
-        product_id: 'prod-1',
-        variant_id: 'var-1-1',
-        product_name_snapshot: 'Squishy Bánh Mì Nướng Bơ',
-        variant_name_snapshot: 'Vị Socola',
-        unit_price: 45000,
-        quantity: 2,
-        line_total: 90000,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'ord-102',
-    code: 'CM8M4R2X',
-    customer_id: 'cust-2',
-    customer_name: 'Trần Văn Nam',
-    phone: '0912345678',
-    email: 'nam@example.com',
-    address_province: 'Thành phố Hà Nội',
-    address_ward: 'Phường Hàng Bạc',
-    address_detail: 'Số 12 Phố Hàng Bạc',
-    note: null,
-    is_preorder: false,
-    status: 'packing',
-    payment_method: 'bank_qr',
-    payment_status: 'paid',
-    subtotal: 65000,
-    shipping_fee: 22000,
-    total: 87000,
-    source: 'Threads',
-    cancel_reason: null,
-    internal_note: null,
-    expires_at: null,
-    idempotency_key: null,
-    anonymized_at: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    items: [
-      {
-        id: 'item-2',
-        order_id: 'ord-102',
-        product_id: 'prod-2',
-        variant_id: 'var-2-1',
-        product_name_snapshot: 'Squishy Mèo Béo Bánh Bao',
-        variant_name_snapshot: 'Mèo Trắng Đốm',
-        unit_price: 65000,
-        quantity: 1,
-        line_total: 65000,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-];
-
 async function handleExport(req: NextRequest) {
   try {
     const supabase = createClient();
+    let orderIds: string[] = [];
 
-    // 1. Fetch live orders in status 'confirmed' or 'packing'
-    const { data: liveOrders, error: liveErr } = await supabase
+    // 1. Check if specific order IDs are provided via POST body
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        if (Array.isArray(body?.orderIds) && body.orderIds.length > 0) {
+          orderIds = body.orderIds;
+        }
+      } catch (e) {
+        // empty or non-json body is acceptable
+      }
+    }
+
+    // 2. Check if order IDs are provided via query parameter ?ids=id1,id2
+    const url = new URL(req.url);
+    const idsParam = url.searchParams.get('ids');
+    if (idsParam) {
+      const parsed = idsParam.split(',').map((id) => id.trim()).filter(Boolean);
+      if (parsed.length > 0) {
+        orderIds = [...new Set([...orderIds, ...parsed])];
+      }
+    }
+
+    // 3. Query orders from Supabase
+    let query = supabase
       .from('orders')
-      .select('*, items:order_items(*)')
-      .in('status', ['confirmed', 'packing'])
-      .order('created_at', { ascending: false });
+      .select('*, items:order_items(*)');
 
-    // 2. Fallback to mock packing demo orders if database has no active confirmed/packing orders
-    const ordersToExport: SPXOrderExportItem[] =
-      liveOrders && liveOrders.length > 0
-        ? (liveOrders as SPXOrderExportItem[])
-        : MOCK_PACKING_ORDERS;
+    if (orderIds.length > 0) {
+      // Export specifically selected orders
+      query = query.in('id', orderIds);
+    } else {
+      // Default: export active orders ready for fulfillment (new, confirmed, packing)
+      query = query
+        .in('status', ['new', 'confirmed', 'packing'])
+        .order('created_at', { ascending: false });
+    }
 
-    const result = await generateSPXMassOrderExcel(ordersToExport);
+    const { data: liveOrders, error: liveErr } = await query;
+
+    if (liveErr) {
+      console.error('[SPX Export Query Error]:', liveErr);
+      return NextResponse.json(
+        { success: false, message: 'Lỗi truy vấn cơ sở dữ liệu: ' + liveErr.message },
+        { status: 500 }
+      );
+    }
+
+    if (!liveOrders || liveOrders.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: orderIds.length > 0
+            ? 'Các đơn hàng bạn chọn không tồn tại hoặc đã bị xóa.'
+            : 'Hiện không có đơn hàng nào (mới, xác nhận hoặc đóng gói) để xuất file SPX.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 4. Generate SPX mass order Excel file (single sheet 'Tạo đơn (địa chỉ mới)')
+    const result = await generateSPXMassOrderExcel(liveOrders as SPXOrderExportItem[]);
 
     const filename = `SPX_DonHang_Chocomino_${new Date().toISOString().slice(0, 10)}.xlsx`;
 

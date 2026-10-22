@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { Order, OrderItem } from '@/types/database';
-import { Printer, ArrowLeft, Package, CheckCircle2 } from 'lucide-react';
+import { Printer, ArrowLeft } from 'lucide-react';
 
 interface OrderWithItems extends Order {
   items: OrderItem[];
@@ -100,7 +100,7 @@ export default function BatchPrintLabelsPage() {
             break-after: page !important;
             margin: 0 !important;
             box-shadow: none !important;
-            border-radius: 0 !important;
+            border-color: black !important;
           }
         }
       `}</style>
@@ -114,11 +114,11 @@ export default function BatchPrintLabelsPage() {
           <ArrowLeft size={15} /> Quay lại Quản lý đơn
         </Link>
 
-        {/* Size toggle */}
+        {/* Size Selection */}
         <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
           <button
             onClick={() => setPrintSize('a7')}
-            className={`px-3 py-1.5 rounded-lg transition-colors ${
+            className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
               printSize === 'a7' ? 'bg-[#E24C7C] text-white shadow-xs' : 'text-gray-600 hover:text-black'
             }`}
           >
@@ -126,7 +126,7 @@ export default function BatchPrintLabelsPage() {
           </button>
           <button
             onClick={() => setPrintSize('thermal_100x150')}
-            className={`px-3 py-1.5 rounded-lg transition-colors ${
+            className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
               printSize === 'thermal_100x150' ? 'bg-[#E24C7C] text-white shadow-xs' : 'text-gray-600 hover:text-black'
             }`}
           >
@@ -134,7 +134,7 @@ export default function BatchPrintLabelsPage() {
           </button>
           <button
             onClick={() => setPrintSize('a5')}
-            className={`px-3 py-1.5 rounded-lg transition-colors ${
+            className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
               printSize === 'a5' ? 'bg-[#E24C7C] text-white shadow-xs' : 'text-gray-600 hover:text-black'
             }`}
           >
@@ -145,14 +145,14 @@ export default function BatchPrintLabelsPage() {
         {/* Print Button */}
         <button
           onClick={() => window.print()}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#E24C7C] text-white font-bold text-xs shadow-md hover:bg-[#F9739B] transition-all"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#E24C7C] text-white font-bold text-xs shadow-md hover:bg-[#F9739B] transition-all cursor-pointer"
         >
           <Printer size={16} />
           <span>In tất cả ({orders.length} phiếu)</span>
         </button>
       </div>
 
-      {/* Render All Selected Order Labels */}
+      {/* Render All Selected Order Labels (Identical Layout to Single Print) */}
       <div className="space-y-6 print:space-y-0">
         {orders.map((order, orderIdx) => {
           const isCOD = order.payment_method === 'cod';
@@ -161,81 +161,154 @@ export default function BatchPrintLabelsPage() {
           return (
             <div
               key={order.id}
-              className={`batch-label-item mx-auto bg-white border border-gray-400 p-4 shadow-md ${
+              className={`batch-label-item mx-auto bg-white border-2 border-black shadow-md print:shadow-none print:border-black print:m-0 ${
                 printSize === 'a7'
-                  ? 'max-w-[76mm] min-h-[130mm] text-[10px]'
-                  : printSize === 'a5'
-                  ? 'max-w-[148mm] min-h-[210mm] text-xs'
-                  : 'max-w-[100mm] min-h-[150mm] text-[11px]'
+                  ? 'w-[287px] min-h-[491px] p-3 space-y-2 text-[10px] leading-tight'
+                  : printSize === 'thermal_100x150'
+                  ? 'w-[380px] min-h-[570px] p-4 space-y-3 text-[11px]'
+                  : 'w-[560px] min-h-[790px] p-6 space-y-4 text-xs'
               }`}
             >
-              {/* Header: Shop info & Barcode representation */}
-              <div className="flex items-start justify-between border-b-2 border-black pb-2 mb-2">
-                <div>
-                  <h1 className="font-bold text-sm tracking-tight uppercase">chocomino squishy</h1>
-                  <p className="text-[9px] text-gray-700">Đ. Số 2/38/32 Bình Đường 1, Dĩ An, TP.HCM</p>
-                  <p className="text-[9px] text-gray-700">Hotline: 0900000000</p>
+              {/* Header: Carrier & Brand */}
+              <div className="flex items-center justify-between border-b-2 border-black pb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`font-title font-extrabold tracking-tight ${
+                      printSize === 'a7' ? 'text-base' : 'text-xl'
+                    }`}
+                  >
+                    chocomino
+                  </span>
+                  <span className="text-[8px] font-bold border border-black px-1 py-0.2 rounded">
+                    SQUISHY SHOP
+                  </span>
                 </div>
                 <div className="text-right">
-                  <div className="border border-black px-2 py-0.5 font-mono font-bold text-xs inline-block">
-                    {order.code}
-                  </div>
-                  <p className="text-[9px] font-bold text-gray-600 mt-0.5">SPX EXPRESS</p>
+                  <span
+                    className={`font-extrabold tracking-wider uppercase ${
+                      printSize === 'a7' ? 'text-xs' : 'text-sm'
+                    }`}
+                  >
+                    SPX EXPRESS
+                  </span>
+                  <p className="text-[8px] font-mono">Phiếu giao hàng TMĐT</p>
                 </div>
               </div>
 
-              {/* Receiver Section */}
-              <div className="border-b-2 border-black pb-2 mb-2">
-                <span className="text-[9px] uppercase font-bold text-gray-500 block">Người nhận:</span>
-                <p className="font-bold text-xs uppercase">{order.customer_name}</p>
-                <p className="font-bold text-xs tracking-wider">{order.phone}</p>
-                <p className="mt-0.5 leading-tight">
-                  {order.address_detail}, {order.address_ward}, {order.address_province}
-                </p>
+              {/* Order Barcode / Code Area */}
+              <div className="border-b-2 border-black pb-1.5 flex items-center justify-between">
+                <div>
+                  <span className="text-[8px] uppercase font-bold text-gray-600">Mã đơn hàng</span>
+                  <p
+                    className={`font-mono font-extrabold tracking-wider ${
+                      printSize === 'a7' ? 'text-base' : 'text-xl'
+                    }`}
+                  >
+                    {order.code}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[8px] uppercase font-bold text-gray-600">Ngày tạo</span>
+                  <p className="font-mono text-[9px] font-bold">
+                    {new Date(order.created_at).toLocaleDateString('vi-VN')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Sender & Receiver Boxes */}
+              <div className="grid grid-cols-2 gap-2 border-b-2 border-black pb-1.5">
+                {/* Sender */}
+                <div className="pr-1.5 border-r border-black space-y-0.5">
+                  <span className="font-bold text-[8px] uppercase tracking-wider block text-gray-600">
+                    Người gửi:
+                  </span>
+                  <p className="font-bold">chocomino shop</p>
+                  <p className="text-gray-700 leading-tight">
+                    Đ. Số 2/38/32 Bình Đường 1, Dĩ An, TP.HCM
+                  </p>
+                  <p className="font-mono font-bold">Hotline: 0900000000</p>
+                </div>
+
+                {/* Receiver */}
+                <div className="pl-1 space-y-0.5">
+                  <span className="font-bold text-[8px] uppercase tracking-wider block text-gray-600">
+                    Người nhận:
+                  </span>
+                  <p className="font-bold text-[11px]">{order.customer_name}</p>
+                  <p className="font-mono font-extrabold text-[10px]">{order.phone}</p>
+                  <p className="text-gray-900 leading-tight">
+                    {order.address_detail}, {order.address_ward}, {order.address_province}
+                  </p>
+                </div>
               </div>
 
               {/* Items List */}
-              <div className="border-b-2 border-black pb-2 mb-2">
-                <span className="text-[9px] uppercase font-bold text-gray-500 block mb-1">
+              <div className="border-b-2 border-black pb-1.5 space-y-0.5">
+                <span className="font-bold text-[8px] uppercase tracking-wider block text-gray-600">
                   Nội dung hàng ({order.items?.length || 0} món):
                 </span>
-                <ul className="space-y-0.5">
+                <div className="divide-y divide-gray-200">
                   {order.items?.map((it, idx) => (
-                    <li key={idx} className="flex justify-between items-center text-[10px]">
-                      <span className="truncate pr-2">
-                        • {it.product_name_snapshot} ({it.variant_name_snapshot})
+                    <div key={idx} className="py-0.5 flex justify-between items-center">
+                      <span className="font-medium truncate max-w-[180px]">
+                        {idx + 1}. {it.product_name_snapshot} ({it.variant_name_snapshot})
                       </span>
-                      <span className="font-bold shrink-0">x{it.quantity}</span>
-                    </li>
+                      <span className="font-mono font-bold shrink-0">SL: {it.quantity}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
                 {order.note && (
-                  <p className="mt-1 text-[9px] italic border-t border-dashed border-gray-300 pt-1">
-                    Ghi chú khách: {order.note}
+                  <p className="italic border-t border-dashed border-gray-300 pt-0.5 text-gray-700">
+                    Ghi chú: {order.note}
                   </p>
                 )}
               </div>
 
-              {/* COD Cash Collection - Highlighted Box */}
-              <div className="border-2 border-black p-2 my-2 text-center bg-gray-50">
-                <span className="text-[9px] uppercase font-bold block text-gray-700">
-                  Tiền thu người nhận (COD):
-                </span>
-                <p className="font-mono text-base font-black tracking-wider text-black">
-                  {isCOD ? `${codAmount.toLocaleString('vi-VN')} đ` : '0 đ (ĐÃ THANH TOÁN)'}
-                </p>
-                <p className="text-[8px] text-gray-600 mt-0.5">
-                  {isCOD ? 'Thu tiền mặt trước khi giao gói hàng' : 'Không thu thêm tiền của người nhận'}
-                </p>
+              {/* COD Collection Box - CRITICAL HIGHLIGHT */}
+              <div className="border-2 border-black p-1.5 bg-gray-50 flex items-center justify-between">
+                <div>
+                  <span className="font-extrabold text-[9px] uppercase block tracking-wider">
+                    TIỀN THU NGƯỜI NHẬN (COD):
+                  </span>
+                  <span className="text-[8px] text-gray-600">
+                    {isCOD ? 'Thu đúng số tiền ghi bên phải' : 'Đã thanh toán qua VietQR'}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span
+                    className={`font-title font-extrabold tracking-tight block ${
+                      printSize === 'a7' ? 'text-lg' : 'text-2xl'
+                    }`}
+                  >
+                    {isCOD ? `${codAmount.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ'}
+                  </span>
+                  {!isCOD && (
+                    <span className="text-[8px] font-extrabold text-green-700 border border-green-700 px-1 py-0.2 rounded">
+                      ĐÃ THANH TOÁN
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Footer / SPX Instructions */}
-              <div className="text-[8px] text-gray-600 leading-tight space-y-0.5 mt-2">
-                <p>• Không cho xem hàng | Cho phép đồng kiểm theo chính sách SPX.</p>
-                <p>• Quay video toàn cảnh mở hộp khi nhận hàng để được đổi trả trong 3 ngày.</p>
-                <div className="flex justify-between items-center pt-2 text-[8px] text-gray-500">
+              {/* Footer / Instructions */}
+              <div className="pt-1 text-[8px] text-gray-600 space-y-0.5">
+                <p>• Không cho xem hàng, không cho thử theo tiêu chuẩn SPX.</p>
+                <p>• Khách hàng vui lòng <b>quay video mở hộp kiện hàng</b> để hỗ trợ đổi trả 3 ngày.</p>
+                <div className="flex justify-between items-center pt-1 text-[8px] text-gray-500 font-mono">
                   <span>Phiếu {orderIdx + 1}/{orders.length}</span>
                   <span>Ngày in: {new Date().toLocaleDateString('vi-VN')}</span>
+                </div>
+              </div>
+
+              {/* Signatures */}
+              <div className="pt-2 grid grid-cols-2 gap-2 text-center text-[8px] border-t border-dashed border-gray-400">
+                <div>
+                  <span className="font-bold uppercase">Chữ ký người gửi</span>
+                  <div className={printSize === 'a7' ? 'h-5' : 'h-8'}></div>
+                </div>
+                <div>
+                  <span className="font-bold uppercase">Chữ ký người nhận</span>
+                  <div className={printSize === 'a7' ? 'h-5' : 'h-8'}></div>
                 </div>
               </div>
             </div>
