@@ -76,3 +76,13 @@ CREATE POLICY "Allow select return_requests" ON return_requests
 DROP POLICY IF EXISTS "Allow update return_requests" ON return_requests;
 CREATE POLICY "Allow update return_requests" ON return_requests
   FOR UPDATE USING (true);
+
+-- 8. Cho phép lưu và cập nhật cấu hình shop & tài khoản ngân hàng (settings)
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow update settings" ON settings;
+CREATE POLICY "Allow update settings" ON settings
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow insert settings" ON settings;
+CREATE POLICY "Allow insert settings" ON settings
+  FOR INSERT WITH CHECK (true);

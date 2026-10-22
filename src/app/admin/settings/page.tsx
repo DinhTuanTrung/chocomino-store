@@ -2,7 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { AdminNav } from '@/components/AdminNav';
-import { Settings, Save, CheckCircle2, Truck, Store, CreditCard, Share2, Copy, Check, Bell, Users, UserPlus, Shield, Ban, UserCheck, RefreshCw } from 'lucide-react';
+import {
+  Settings,
+  Save,
+  CheckCircle2,
+  Truck,
+  Store,
+  CreditCard,
+  Share2,
+  Copy,
+  Check,
+  Bell,
+  Users,
+  UserPlus,
+  Ban,
+  UserCheck,
+} from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [shopName, setShopName] = useState('chocomino');
@@ -11,17 +26,18 @@ export default function AdminSettingsPage() {
     'Đ. Số 2/38/32 Bình Đường 1, Khu Phố, Dĩ An, Hồ Chí Minh, Việt Nam'
   );
 
+  // Bank Account & VietQR Settings (FR-C-41)
+  const [bankName, setBankName] = useState('Techcombank');
+  const [bankAccount, setBankAccount] = useState('');
+  const [accountHolder, setAccountHolder] = useState('NGUYEN VAN TRUNG');
+  const [qrTimeoutMinutes, setQrTimeoutMinutes] = useState(15);
+
+  // Shipping Fees
   const [shipHcm, setShipHcm] = useState(18000);
   const [shipOther, setShipOther] = useState(22000);
   const [freeShipThreshold, setFreeShipThreshold] = useState<number>(0);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('chocomino_free_shipping_threshold');
-      if (stored) setFreeShipThreshold(Number(stored));
-    }
-  }, []);
-
+  // SPX Export Configuration
   const [spxWeight, setSpxWeight] = useState(0.2);
   const [spxPayer, setSpxPayer] = useState('Người gửi trả');
 
@@ -34,6 +50,50 @@ export default function AdminSettingsPage() {
   const [newUserRole, setNewUserRole] = useState<'staff' | 'owner'>('staff');
   const [isSubmittingUser, setIsSubmittingUser] = useState(false);
   const [userMsg, setUserMsg] = useState('');
+
+  const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://chocomino-store.vercel.app';
+
+  // 1. Load Settings from Supabase on mount
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/admin/settings');
+        const data = await res.json();
+        if (data.success && data.settings) {
+          const s = data.settings;
+          if (s.shop_info) {
+            if (s.shop_info.name) setShopName(s.shop_info.name);
+            if (s.shop_info.phone) setShopPhone(s.shop_info.phone);
+            if (s.shop_info.address) setPickupAddress(s.shop_info.address);
+          }
+          if (s.shipping) {
+            if (s.shipping.ship_hcm !== undefined) setShipHcm(Number(s.shipping.ship_hcm));
+            if (s.shipping.ship_other !== undefined) setShipOther(Number(s.shipping.ship_other));
+            if (s.shipping.free_ship_threshold !== undefined) {
+              setFreeShipThreshold(Number(s.shipping.free_ship_threshold));
+            }
+          }
+          if (s.bank_account) {
+            if (s.bank_account.bank_name) setBankName(s.bank_account.bank_name);
+            if (s.bank_account.account_number) setBankAccount(s.bank_account.account_number);
+            if (s.bank_account.account_holder) setAccountHolder(s.bank_account.account_holder);
+            if (s.bank_account.qr_timeout_minutes) setQrTimeoutMinutes(Number(s.bank_account.qr_timeout_minutes));
+          }
+          if (s.spx_config) {
+            if (s.spx_config.default_weight_kg) setSpxWeight(Number(s.spx_config.default_weight_kg));
+            if (s.spx_config.payment_role) setSpxPayer(s.spx_config.payment_role);
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải cấu hình:', err);
+      }
+    }
+    loadSettings();
+  }, []);
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
@@ -107,24 +167,61 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const [saved, setSaved] = useState(false);
-  const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
-
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://chocomino-store.vercel.app';
-
   const handleCopyLink = (url: string, channel: string) => {
     navigator.clipboard.writeText(url);
     setCopiedChannel(channel);
     setTimeout(() => setCopiedChannel(null), 2000);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  // 2. Save settings to Supabase
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chocomino_free_shipping_threshold', String(freeShipThreshold));
+    setIsSaving(true);
+    try {
+      const payload = {
+        shop_info: {
+          name: shopName.trim(),
+          phone: shopPhone.trim(),
+          address: pickupAddress.trim(),
+        },
+        bank_account: {
+          bank_name: bankName,
+          account_number: bankAccount.trim(),
+          account_holder: accountHolder.trim().toUpperCase(),
+          qr_timeout_minutes: qrTimeoutMinutes || 15,
+        },
+        shipping: {
+          ship_hcm: shipHcm,
+          ship_other: shipOther,
+          free_ship_threshold: freeShipThreshold,
+        },
+        spx_config: {
+          default_weight_kg: spxWeight,
+          payment_role: spxPayer,
+        },
+      };
+
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Lỗi từ máy chủ khi lưu cấu hình');
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chocomino_free_shipping_threshold', String(freeShipThreshold));
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Đã có lỗi xảy ra khi lưu cấu hình');
+    } finally {
+      setIsSaving(false);
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
   };
 
   return (
@@ -137,14 +234,14 @@ export default function AdminSettingsPage() {
             <Settings className="text-[#F9739B]" size={28} /> Cài đặt Cửa hàng & Vận hành
           </h1>
           <p className="text-xs text-[#7D5C5C]">
-            Tùy chỉnh thông tin cửa hàng, biểu phí ship và các thông số xuất đơn SPX Express mặc định.
+            Tùy chỉnh thông tin cửa hàng, tài khoản ngân hàng VietQR, biểu phí ship và thông số xuất đơn SPX Express.
           </p>
         </div>
 
         {saved && (
           <div className="p-4 rounded-2xl bg-[#FFE8EF] border border-[#F9739B]/30 text-xs font-bold text-[#E24C7C] flex items-center gap-2 animate-fadeIn">
             <CheckCircle2 size={16} />
-            <span>Đã lưu cài đặt cấu hình thành công!</span>
+            <span>Đã lưu cài đặt cấu hình thành công vào hệ thống!</span>
           </div>
         )}
 
@@ -188,7 +285,83 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* 2. Shipping Fees */}
+          {/* 2. Bank Account & VietQR Settings (FR-C-41) */}
+          <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
+            <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
+              <CreditCard size={18} className="text-[#E24C7C]" /> Tài khoản Ngân hàng nhận VietQR (SePay)
+            </h2>
+            <p className="text-xs text-[#7D5C5C]">
+              Thông tin tài khoản nhận tiền chuyển khoản tự động. Khách quét mã VietQR sẽ hiển thị đúng số tài khoản này.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#7D5C5C]">Ngân hàng</label>
+                <select
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A] bg-white font-medium cursor-pointer"
+                >
+                  <option value="Techcombank">Techcombank (Ngân hàng Kỹ Thương)</option>
+                  <option value="Vietcombank">Vietcombank (Ngân hàng Ngoại Thương)</option>
+                  <option value="MBBank">MBBank (Ngân hàng Quân Đội)</option>
+                  <option value="ACB">ACB (Ngân hàng Á Châu)</option>
+                  <option value="VPBank">VPBank (Ngân hàng Việt Nam Thịnh Vượng)</option>
+                  <option value="TPBank">TPBank (Ngân hàng Tiên Phong)</option>
+                  <option value="BIDV">BIDV (Ngân hàng Đầu tư & Phát triển)</option>
+                  <option value="VietinBank">VietinBank (Ngân hàng Công Thương)</option>
+                  <option value="Agribank">Agribank (Ngân hàng Nông nghiệp & PTNT)</option>
+                  <option value="Sacombank">Sacombank (Ngân hàng Sài Gòn Thương Tín)</option>
+                  <option value="VIB">VIB (Ngân hàng Quốc Tế)</option>
+                  <option value="OCB">OCB (Ngân hàng Phương Đông)</option>
+                  <option value="SeABank">SeABank (Ngân hàng Đông Nam Á)</option>
+                  <option value="MSB">MSB (Ngân hàng Hàng Hải)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#7D5C5C]">Số tài khoản ngân hàng</label>
+                <input
+                  type="text"
+                  value={bankAccount}
+                  onChange={(e) => setBankAccount(e.target.value)}
+                  placeholder="VD: 19036578291012"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A] font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#7D5C5C]">Tên chủ tài khoản (In hoa không dấu)</label>
+                <input
+                  type="text"
+                  value={accountHolder}
+                  onChange={(e) => setAccountHolder(e.target.value.toUpperCase())}
+                  placeholder="VD: NGUYEN VAN TRUNG"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A] font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#7D5C5C]">Thời gian chờ thanh toán VietQR (Phút)</label>
+                <input
+                  type="number"
+                  value={qrTimeoutMinutes}
+                  onChange={(e) => setQrTimeoutMinutes(Number(e.target.value))}
+                  min={5}
+                  max={60}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs text-[#5A3A3A]"
+                />
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#FFF9F6] border border-[#FFE8EF] text-[11px] text-[#7D5C5C] space-y-1">
+              <p className="font-bold text-[#E24C7C]">💡 Lưu ý quan trọng khi đổi tài khoản ngân hàng:</p>
+              <p>• Khi bạn bấm lưu cấu hình, mã QR hiển thị cho khách đặt hàng sẽ tự động đổi sang số tài khoản mới này.</p>
+              <p>• Đồng thời, bạn cần đảm bảo tài khoản này đã được liên kết trong mục <b>Ngân hàng</b> trên cổng <b><a href="https://my.sepay.vn" target="_blank" rel="noreferrer" className="underline text-[#E24C7C]">my.sepay.vn</a></b> để SePay có thể đọc biến động số dư và tự động duyệt đơn cho shop.</p>
+            </div>
+          </div>
+
+          {/* 3. Shipping Fees */}
           <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
             <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
               <Truck size={18} className="text-[#F9739B]" /> Biểu phí Vận chuyển SPX
@@ -244,7 +417,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* 3. SPX Default Parameters */}
+          {/* 4. SPX Default Parameters */}
           <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
             <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
               <Truck size={18} className="text-[#9ADFC8]" /> Cấu hình File Excel SPX Mặc định
@@ -281,7 +454,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* 4. Marketing UTM Campaign Links (FR-A-81) */}
+          {/* 5. Marketing UTM Campaign Links (FR-A-81) */}
           <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
@@ -312,7 +485,7 @@ export default function AdminSettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleCopyLink(item.url, item.channel)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all self-end sm:self-auto"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all self-end sm:self-auto cursor-pointer"
                   >
                     {copiedChannel === item.channel ? (
                       <>
@@ -331,7 +504,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* 5. Telegram Bot Notification (FR-A-71) */}
+          {/* 6. Telegram Bot Notification (FR-A-71) */}
           <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
@@ -339,7 +512,7 @@ export default function AdminSettingsPage() {
               </h2>
             </div>
             <p className="text-xs text-[#7D5C5C]">
-              Hệ thống đã tích hợp sẵn cơ chế gửi thông báo tự động về nhóm chat Telegram của chủ shop khi có: <b>Đơn hàng mới tạo</b> và <b>Yêu cầu đổi trả mới</b>.
+              Hệ thống đã tích hợp sẵn cơ chế gửi thông báo tự động về nhóm chat Telegram của chủ shop khi có: <b>Đơn hàng mới tạo</b>, <b>Thanh toán thành công</b> và <b>Yêu cầu đổi trả</b>.
             </p>
             <div className="p-4 rounded-2xl bg-[#FFF9F6] border border-[#FFE8EF] text-xs text-[#5A3A3A] space-y-2">
               <p className="font-bold text-[#E24C7C]">Hướng dẫn kích hoạt nhận thông báo Telegram:</p>
@@ -349,13 +522,10 @@ export default function AdminSettingsPage() {
                 <li>Tạo một nhóm chat Telegram (nhóm nhân viên hoặc riêng bạn), thêm bot vào nhóm và lấy <b>Chat ID</b> (vd: <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono">-100123456789</code>).</li>
                 <li>Thêm 2 biến môi trường vào Vercel Settings: <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono font-bold">TELEGRAM_BOT_TOKEN</code> và <code className="bg-white px-1.5 py-0.5 rounded border border-[#FFE8EF] font-mono font-bold">TELEGRAM_CHAT_ID</code>.</li>
               </ol>
-              <p className="text-[11px] text-[#A39A9A] italic">
-                * Lưu ý: Nếu chưa cấu hình Telegram, hệ thống vẫn tạo đơn hàng bình thường và không phát sinh bất kỳ lỗi nào (theo chuẩn an toàn FR-A-74).
-              </p>
             </div>
           </div>
 
-          {/* 6. Staff & Admin Accounts Management (FR-A-61) */}
+          {/* 7. Staff & Admin Accounts Management (FR-A-61) */}
           <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
@@ -449,34 +619,32 @@ export default function AdminSettingsPage() {
 
                 <div className="space-y-3 text-xs">
                   <div className="space-y-1">
-                    <label className="font-bold text-[#7D5C5C]">Tên nhân viên (*)</label>
+                    <label className="font-bold text-[#7D5C5C]">Họ và tên</label>
                     <input
                       type="text"
-                      required
-                      placeholder="VD: Nguyễn Văn A (Soát đơn)"
+                      placeholder="VD: Nguyễn Văn B"
                       value={newUserName}
                       onChange={(e) => setNewUserName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-[#7D5C5C]">Email đăng nhập (*)</label>
+                    <label className="font-bold text-[#7D5C5C]">Email nhân viên</label>
                     <input
                       type="email"
-                      required
-                      placeholder="nhanvien@chocomino.local"
+                      placeholder="VD: staff@chocomino.local"
                       value={newUserEmail}
                       onChange={(e) => setNewUserEmail(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-[#7D5C5C]">Vai trò (*)</label>
+                    <label className="font-bold text-[#7D5C5C]">Vai trò</label>
                     <select
                       value={newUserRole}
-                      onChange={(e) => setNewUserRole(e.target.value as any)}
+                      onChange={(e: any) => setNewUserRole(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none bg-white font-medium"
                     >
                       <option value="staff">Nhân viên (Xem và xử lý đơn hàng, đóng gói SPX)</option>
@@ -510,9 +678,10 @@ export default function AdminSettingsPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#F9739B] text-white font-title text-sm font-bold shadow-md hover:bg-[#E24C7C] transition-all"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#F9739B] text-white font-title text-sm font-bold shadow-md hover:bg-[#E24C7C] transition-all cursor-pointer disabled:opacity-50"
             >
-              <Save size={16} /> Lưu cấu hình
+              <Save size={16} /> {isSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
             </button>
           </div>
         </form>

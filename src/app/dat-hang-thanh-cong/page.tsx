@@ -28,6 +28,33 @@ function OrderSuccessContent() {
   const [order, setOrder] = useState<any>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(15 * 60); // 15 mins countdown
+  const [bankConfig, setBankConfig] = useState<{
+    bankName: string;
+    bankAccount: string;
+    accountHolder: string;
+  }>({
+    bankName: 'Techcombank',
+    bankAccount: '',
+    accountHolder: 'NGUYEN VAN TRUNG',
+  });
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'bank_account')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) {
+          setBankConfig({
+            bankName: data.value.bank_name || 'Techcombank',
+            bankAccount: data.value.account_number || '',
+            accountHolder: data.value.account_holder || 'NGUYEN VAN TRUNG',
+          });
+        }
+      });
+  }, []);
 
   useEffect(() => {
     // 1. Try reading last order from sessionStorage
@@ -128,9 +155,9 @@ function OrderSuccessContent() {
 
   const paymentMethod = order?.paymentMethod || order?.payment_method || pmParam || 'cod';
   const isBankQR = paymentMethod === 'bank_qr';
-  const bankAccount = '19030000000000'; // Default Techcombank account placeholder
-  const bankName = 'Techcombank';
-  const accountHolder = 'NGUYEN VAN TRUNG';
+  const bankAccount = bankConfig.bankAccount || process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NUMBER || '19030000000000';
+  const bankName = bankConfig.bankName || process.env.NEXT_PUBLIC_SEPAY_BANK_NAME || 'Techcombank';
+  const accountHolder = bankConfig.accountHolder || process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_HOLDER || 'NGUYEN VAN TRUNG';
   const totalAmount = order?.total || 63000;
 
   const qrImageUrl = generateVietQRUrl({
