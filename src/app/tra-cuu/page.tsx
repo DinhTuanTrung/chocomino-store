@@ -17,6 +17,8 @@ import {
   ShieldAlert,
   Video,
   X,
+  CreditCard,
+  Ban,
 } from 'lucide-react';
 
 function OrderLookupContent() {
@@ -37,11 +39,19 @@ function OrderLookupContent() {
   const [submittingReturn, setSubmittingReturn] = useState(false);
   const [returnSuccessMsg, setReturnSuccessMsg] = useState('');
 
+  // Cancel Order Modal State (FR-C-54)
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('Đổi ý, không muốn mua nữa');
+  const [customCancelReason, setCustomCancelReason] = useState('');
+  const [submittingCancel, setSubmittingCancel] = useState(false);
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState('');
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setOrderResult(null);
     setReturnSuccessMsg('');
+    setCancelSuccessMsg('');
 
     if (!orderCode.trim() || !phone.trim()) {
       setError('Vui lòng nhập cả Mã đơn hàng và Số điện thoại đặt hàng');
@@ -140,6 +150,45 @@ function OrderLookupContent() {
     }
   };
 
+  const handleConfirmCancel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalReason =
+      cancelReason === 'Lý do khác'
+        ? customCancelReason.trim() || 'Lý do khác'
+        : cancelReason;
+
+    setSubmittingCancel(true);
+    try {
+      const res = await fetch('/api/orders/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderCode: orderResult.code,
+          phone,
+          reason: finalReason,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Không thể hủy đơn hàng');
+        return;
+      }
+
+      setCancelSuccessMsg('Đơn hàng đã được hủy thành công.');
+      setShowCancelModal(false);
+      setOrderResult((prev: any) => ({
+        ...prev,
+        status: 'cancelled',
+        cancel_reason: finalReason,
+      }));
+    } catch (err) {
+      alert('Lỗi kết nối khi gửi yêu cầu hủy đơn');
+    } finally {
+      setSubmittingCancel(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl w-full mx-auto px-4 py-8 space-y-6">
       <div className="text-center space-y-2">
@@ -201,6 +250,13 @@ function OrderLookupContent() {
         </div>
       )}
 
+      {cancelSuccessMsg && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 flex items-center gap-2">
+          <CheckCircle2 size={16} className="text-amber-600" />
+          <span>{cancelSuccessMsg}</span>
+        </div>
+      )}
+
       {/* Result Card */}
       {orderResult && (
         <div className="bg-white rounded-3xl border border-[#FFE8EF] p-6 space-y-5 shadow-xs animate-fadeIn">
@@ -212,7 +268,13 @@ function OrderLookupContent() {
             </div>
             <div className="text-right">
               <span className="text-[10px] text-[#A39A9A]">Trạng thái</span>
-              <span className="block font-bold text-xs text-[#E24C7C] bg-[#FFE8EF] px-3 py-1 rounded-full capitalize">
+              <span
+                className={`block font-bold text-xs px-3 py-1 rounded-full capitalize ${
+                  orderResult.status === 'cancelled'
+                    ? 'text-red-700 bg-red-100'
+                    : 'text-[#E24C7C] bg-[#FFE8EF]'
+                }`}
+              >
                 {orderResult.status === 'completed'
                   ? 'Hoàn thành'
                   : orderResult.status === 'packing'
@@ -225,6 +287,8 @@ function OrderLookupContent() {
                   ? 'Đã duyệt đổi trả'
                   : orderResult.status === 'return_rejected'
                   ? 'Từ chối đổi trả'
+                  : orderResult.status === 'cancelled'
+                  ? 'Đã hủy'
                   : 'Mới tạo'}
               </span>
             </div>
@@ -246,8 +310,25 @@ function OrderLookupContent() {
             </div>
             <div>
               <span className="text-[11px] text-[#A39A9A]">Hình thức:</span>
-              <p className="font-bold text-[#5A3A3A]">
-                {orderResult.payment_method === 'cod' ? 'COD (Thu khi nhận)' : 'Chuyển khoản VietQR'}
+              <p className="font-bold text-[#5A3A3A] flex items-center gap-1.5 flex-wrap">
+                <span>{orderResult.payment_method === 'cod' ? 'COD (Thu khi nhận)' : 'Chuyển khoản VietQR'}</span>
+                {orderResult.payment_method === 'bank_qr' && (
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      orderResult.payment_status === 'paid'
+                        ? 'bg-green-100 text-green-700'
+                        : orderResult.payment_status === 'expired' || orderResult.status === 'cancelled'
+                        ? 'bg-gray-100 text-gray-600'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {orderResult.payment_status === 'paid'
+                      ? 'Đã thanh toán'
+                      : orderResult.status === 'cancelled'
+                      ? 'Đã hủy'
+                      : 'Chờ thanh toán'}
+                  </span>
+                )}
               </p>
             </div>
             <div>
@@ -277,6 +358,45 @@ function OrderLookupContent() {
             </div>
           )}
 
+          {/* FR-C-45: Re-open QR Code payment banner if awaiting payment */}
+          {orderResult.payment_method === 'bank_qr' &&
+            orderResult.payment_status === 'awaiting' &&
+            orderResult.status !== 'cancelled' && (
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                    <Clock size={18} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-amber-900">Đơn hàng đang chờ thanh toán VietQR</p>
+                    <p className="text-[11px] text-amber-700">
+                      Vui lòng quét mã QR để tiệm xác nhận đơn và chuẩn bị hàng.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href={`/dat-hang-thanh-cong?code=${orderResult.code}&pm=bank_qr`}
+                  className="px-4 py-2 rounded-full bg-[#F9739B] text-white font-title text-xs font-bold shadow-xs hover:bg-[#E24C7C] transition-all text-center shrink-0 flex items-center justify-center gap-1.5"
+                >
+                  <CreditCard size={14} /> Mở lại mã QR thanh toán
+                </Link>
+              </div>
+            )}
+
+          {/* Cancelled Feedback */}
+          {orderResult.status === 'cancelled' && (
+            <div className="p-4 rounded-2xl bg-red-50 border border-red-200 space-y-1 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-red-700">
+                <Ban size={15} /> Đơn hàng này đã bị hủy
+              </div>
+              {orderResult.cancel_reason && (
+                <p className="text-[11px] text-red-600">
+                  Lý do: <i>{orderResult.cancel_reason}</i>
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Return Status Feedback if requested */}
           {orderResult.returnDetails && (
             <div className="p-4 rounded-2xl bg-[#FFF9F6] border border-[#FFE8EF] space-y-2 text-xs">
@@ -301,6 +421,25 @@ function OrderLookupContent() {
                   <span>{orderResult.returnDetails.shop_note}</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* FR-C-54: Customer self-cancel when status is new and unpaid */}
+          {orderResult.status === 'new' && orderResult.payment_status !== 'paid' && (
+            <div className="pt-3 border-t border-[#FFE8EF] flex items-center justify-between">
+              <div>
+                <p className="font-bold text-xs text-[#5A3A3A]">Bạn muốn đổi ý hoặc thay đổi?</p>
+                <p className="text-[10px] text-[#7D5C5C]">
+                  Đơn hàng mới tạo có thể tự hủy ngay trước khi shop chuẩn bị hàng.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCancelModal(true)}
+                className="px-3.5 py-1.5 rounded-full border border-red-200 bg-red-50 text-red-600 font-bold text-xs hover:bg-red-600 hover:text-white transition-all shadow-xs shrink-0"
+              >
+                Hủy đơn hàng
+              </button>
             </div>
           )}
 
@@ -397,6 +536,77 @@ function OrderLookupContent() {
                   className="px-5 py-2.5 rounded-full bg-[#F9739B] text-white font-title font-bold hover:bg-[#E24C7C] transition-all disabled:bg-[#A39A9A]"
                 >
                   {submittingReturn ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Modal (FR-C-54) */}
+      {showCancelModal && orderResult && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-[#FFE8EF] animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-3">
+              <h3 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-1.5">
+                <AlertCircle size={18} className="text-[#E24C7C]" /> Hủy đơn hàng #{orderResult.code}
+              </h3>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="p-1 rounded-full text-[#A39A9A] hover:text-[#5A3A3A]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#7D5C5C] leading-relaxed">
+              Bạn có chắc chắn muốn hủy đơn hàng này không? Sau khi xác nhận hủy, đơn hàng sẽ không thể phục hồi và sản phẩm sẽ được trả lại kho.
+            </p>
+
+            <form onSubmit={handleConfirmCancel} className="space-y-4 text-xs">
+              <div className="space-y-1">
+                <label className="font-bold text-[#7D5C5C]">Lý do hủy đơn (*)</label>
+                <select
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none bg-white font-medium"
+                >
+                  <option value="Đổi ý, không muốn mua nữa">Đổi ý, không muốn mua nữa</option>
+                  <option value="Muốn thay đổi sản phẩm / mẫu mã / size">Muốn thay đổi sản phẩm / mẫu mã / size</option>
+                  <option value="Muốn thay đổi địa chỉ hoặc số điện thoại">Muốn thay đổi địa chỉ hoặc số điện thoại nhận hàng</option>
+                  <option value="Đặt trùng đơn hàng">Đặt trùng đơn hàng</option>
+                  <option value="Lý do khác">Lý do khác</option>
+                </select>
+              </div>
+
+              {cancelReason === 'Lý do khác' && (
+                <div className="space-y-1">
+                  <label className="font-bold text-[#7D5C5C]">Chi tiết lý do (*)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nhập lý do cụ thể..."
+                    value={customCancelReason}
+                    onChange={(e) => setCustomCancelReason(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#FFE8EF] focus:border-[#F9739B] focus:outline-none text-xs"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  className="px-4 py-2 rounded-xl font-bold text-[#7D5C5C] hover:bg-[#FFE8EF]"
+                >
+                  Giữ lại đơn
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingCancel}
+                  className="px-5 py-2.5 rounded-full bg-red-600 text-white font-title font-bold hover:bg-red-700 transition-all disabled:bg-[#A39A9A]"
+                >
+                  {submittingCancel ? 'Đang hủy...' : 'Xác nhận hủy'}
                 </button>
               </div>
             </form>

@@ -60,16 +60,52 @@ function OrderSuccessContent() {
               subtotal: data.subtotal,
               shippingFee: data.shipping_fee,
               paymentMethod: data.payment_method,
+              paymentStatus: data.payment_status,
               customerName: data.customer_name,
               phone: data.phone,
               email: data.email,
               address: `${data.address_detail}, ${data.address_ward}, ${data.address_province}`,
               isPreorder: data.is_preorder,
             });
+            if (data.expires_at) {
+              const diffSec = Math.max(0, Math.floor((new Date(data.expires_at).getTime() - Date.now()) / 1000));
+              setTimeLeftSeconds(diffSec);
+            }
           }
         });
     }
   }, [code]);
+
+  // Polling check for payment status every 5 seconds (FR-C-42)
+  useEffect(() => {
+    const currentPaymentMethod = order?.paymentMethod || order?.payment_method || pmParam || 'cod';
+    if (currentPaymentMethod !== 'bank_qr' || order?.paymentStatus === 'paid' || !code || code === 'CM000000') {
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('orders')
+          .select('payment_status, status')
+          .eq('code', code)
+          .maybeSingle();
+
+        if (data?.payment_status === 'paid') {
+          setOrder((prev: any) => ({
+            ...prev,
+            paymentStatus: 'paid',
+            status: data.status,
+          }));
+        }
+      } catch (e) {
+        // silent fallback
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [order?.paymentMethod, order?.payment_method, order?.paymentStatus, code, pmParam]);
 
   // 15-minute countdown timer (only for bank_qr)
   useEffect(() => {
@@ -134,22 +170,35 @@ function OrderSuccessContent() {
 
       {/* QR Bank Transfer Section (Only for Bank QR payment) */}
       {isBankQR ? (
-        <div className="bg-white rounded-3xl border border-[#FFE8EF] p-6 space-y-5 shadow-xs">
-          <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-4">
-            <div>
-              <h2 className="font-title text-base font-bold text-[#5A3A3A]">
-                Quét mã VietQR chuyển khoản
-              </h2>
-              <p className="text-[11px] text-[#7D5C5C]">
-                Tự động điền đúng số tiền và nội dung chuyển khoản
-              </p>
+        order?.paymentStatus === 'paid' ? (
+          <div className="bg-green-50 border border-green-200 rounded-3xl p-6 text-center space-y-3 animate-fadeIn shadow-xs">
+            <div className="w-14 h-14 rounded-full bg-green-100 text-green-600 mx-auto flex items-center justify-center">
+              <CheckCircle2 size={32} />
             </div>
-            {/* Countdown Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFE8EF] text-[#E24C7C] text-xs font-bold">
-              <Clock size={14} />
-              <span>{formattedTime}</span>
-            </div>
+            <h2 className="font-title text-lg font-bold text-green-900">
+              Đã nhận thanh toán thành công! 🍫
+            </h2>
+            <p className="text-xs text-green-700 max-w-md mx-auto">
+              Tiệm chocomino đã nhận được khoản thanh toán <b>{totalAmount.toLocaleString('vi-VN')}đ</b> cho đơn hàng <b>#{code}</b>. Đơn hàng đang được tiệm chuẩn bị và sớm giao cho bưu tá SPX Express.
+            </p>
           </div>
+        ) : (
+          <div className="bg-white rounded-3xl border border-[#FFE8EF] p-6 space-y-5 shadow-xs">
+            <div className="flex items-center justify-between border-b border-[#FFE8EF] pb-4">
+              <div>
+                <h2 className="font-title text-base font-bold text-[#5A3A3A]">
+                  Quét mã VietQR chuyển khoản
+                </h2>
+                <p className="text-[11px] text-[#7D5C5C]">
+                  Tự động điền đúng số tiền và nội dung chuyển khoản
+                </p>
+              </div>
+              {/* Countdown Badge */}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFE8EF] text-[#E24C7C] text-xs font-bold">
+                <Clock size={14} />
+                <span>{formattedTime}</span>
+              </div>
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
             {/* QR Code Image */}
@@ -219,6 +268,7 @@ function OrderSuccessContent() {
             </div>
           </div>
         </div>
+        )
       ) : (
         /* COD Cash on Delivery Information Section */
         <div className="bg-white rounded-3xl border border-[#FFE8EF] p-6 space-y-5 shadow-xs">

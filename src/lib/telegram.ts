@@ -29,6 +29,15 @@ export interface ReturnNotificationPayload {
   videoProofUrl: string;
 }
 
+export interface CancelOrderNotificationPayload {
+  code: string;
+  customerName: string;
+  phone: string;
+  reason: string;
+  total: number;
+  cancelledBy: 'customer' | 'admin' | 'system';
+}
+
 export async function sendTelegramOrderNotification(payload: NewOrderNotificationPayload): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -125,6 +134,55 @@ export async function sendTelegramReturnNotification(payload: ReturnNotification
     return true;
   } catch (err) {
     console.warn('[Telegram] Dispatch return error:', err);
+    return false;
+  }
+}
+
+export async function sendTelegramCancelNotification(payload: CancelOrderNotificationPayload): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    return false;
+  }
+
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chocomino-store.vercel.app';
+    const adminUrl = `${baseUrl}/admin/orders`;
+
+    const byLabel =
+      payload.cancelledBy === 'customer'
+        ? '👤 Khách hàng tự hủy'
+        : payload.cancelledBy === 'system'
+        ? '⏰ Hệ thống tự động hủy'
+        : '🏪 Shop hủy';
+
+    const message = [
+      `🚫 <b>ĐƠN HÀNG ĐÃ BỊ HỦY!</b>`,
+      `━━━━━━━━━━━━━━━━━━`,
+      `📦 <b>Mã đơn:</b> <code>#${payload.code}</code>`,
+      `👤 <b>Khách hàng:</b> ${payload.customerName}`,
+      `📞 <b>Số điện thoại:</b> ${payload.phone}`,
+      `💰 <b>Giá trị đơn:</b> <b>${payload.total.toLocaleString('vi-VN')}đ</b>`,
+      `❌ <b>Người hủy:</b> ${byLabel}`,
+      `📝 <b>Lý do:</b> <i>${payload.reason}</i>`,
+      `━━━━━━━━━━━━━━━━━━`,
+      `👉 <a href="${adminUrl}">Mở Quản lý Đơn hàng</a>`,
+    ].join('\n');
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      }),
+    });
+    return true;
+  } catch (err) {
+    console.warn('[Telegram] Dispatch cancel error:', err);
     return false;
   }
 }

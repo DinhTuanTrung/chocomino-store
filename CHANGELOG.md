@@ -1,5 +1,19 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.17.0] - 2026-10-22 (Khách Hàng Tự Hủy Đơn, Mở Lại Mã QR Thanh Toán & Báo Cáo Telegram Hủy Đơn)
+
+### Added
+- **Khách Hàng Tự Hủy Đơn Hàng Tại Trang Tra Cứu (`/tra-cuu` - FR-C-54 & D16)**:
+  - Cho phép khách hàng tự hủy đơn hàng trực tiếp trên trang tra cứu khi đơn còn ở trạng thái "Mới" (`status === 'new'`) và chưa thanh toán.
+  - Hộp thoại xác nhận hủy đơn thân thiện với các tùy chọn lý do tiêu chuẩn (Đổi ý không mua nữa, Muốn đổi sản phẩm/size, Muốn đổi địa chỉ/SĐT, Đặt trùng, Lý do khác).
+  - Tích hợp API endpoint [`/api/orders/cancel`](file:///d:/website_chocomino/src/app/api/orders/cancel/route.ts) tự động hoàn trả số lượng tồn kho (`stock_qty`) cho biến thể sản phẩm, ghi nhận lịch sử trạng thái đơn (`order_status_history`), và chuyển trạng thái đơn sang `cancelled`.
+  - Tự động gửi cảnh báo tức thì về Telegram bot của chủ shop (`sendTelegramCancelNotification`) thông báo chi tiết mã đơn, tên khách, số điện thoại, giá trị đơn và lý do hủy.
+- **Mở Lại Mã QR Thanh Toán VietQR Từ Trang Tra Cứu (`/tra-cuu` - FR-C-45)**:
+  - Hiển thị banner nhắc nhở thanh toán nổi bật kèm nút **"💳 Mở lại mã QR thanh toán"** trên trang tra cứu đơn khi đơn hàng chọn phương thức Chuyển khoản VietQR và đang chờ thanh toán (`payment_status === 'awaiting'`).
+  - Dẫn trực tiếp về trang [`/dat-hang-thanh-cong`](file:///d:/website_chocomino/src/app/dat-hang-thanh-cong/page.tsx) với đầy đủ thông tin mã QR, đồng hồ đếm ngược và thông tin chuyển khoản chuẩn xác.
+- **Tự Động Polling Chuyển Trạng Thái Thanh Toán Thành Công (`FR-C-42`)**:
+  - Trang nhận đơn VietQR tự động thăm dò (polling mỗi 5 giây) trạng thái thanh toán từ Supabase; khi hệ thống ghi nhận giao dịch khớp, màn hình tự động chuyển sang trạng thái "Đã nhận thanh toán thành công! 🍫" mà khách không cần tải lại trang.
+
 ## [0.16.0] - 2026-10-22 (Chuẩn Hóa Khổ In Nhiệt A7 76×130mm & Phân Hệ Quản Lý Khách Hàng CRM)
 
 ### Enhanced
