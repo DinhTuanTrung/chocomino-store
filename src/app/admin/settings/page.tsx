@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AdminNav } from '@/components/AdminNav';
-import { Settings, Save, CheckCircle2, Truck, Store, CreditCard } from 'lucide-react';
+import { Settings, Save, CheckCircle2, Truck, Store, CreditCard, Share2, Copy, Check } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [shopName, setShopName] = useState('chocomino');
@@ -18,6 +18,15 @@ export default function AdminSettingsPage() {
   const [spxPayer, setSpxPayer] = useState('Người gửi trả');
 
   const [saved, setSaved] = useState(false);
+  const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://chocomino-store.vercel.app';
+
+  const handleCopyLink = (url: string, channel: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedChannel(channel);
+    setTimeout(() => setCopiedChannel(null), 2000);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,6 +168,56 @@ export default function AdminSettingsPage() {
             <div className="p-3.5 rounded-2xl bg-[#FFF9F6] border border-[#FFE8EF] text-[11px] text-[#7D5C5C] space-y-1">
               <p className="font-bold text-[#5A3A3A]">Các cờ bắt buộc của SPX đã được cố định theo quyết định D25:</p>
               <p>• Giao hàng một phần: <b>N</b> | Cho phép thử hàng: <b>N</b> | Cho xem hàng: <b>N</b> | Bưu gửi giá trị cao: <b>N</b></p>
+            </div>
+          </div>
+
+          {/* 4. Marketing UTM Campaign Links (FR-A-81) */}
+          <div className="bg-white rounded-3xl border border-[#FFE8EF] p-5 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <h2 className="font-title text-base font-bold text-[#5A3A3A] flex items-center gap-2">
+                <Share2 size={18} className="text-[#E24C7C]" /> Bộ Link Tiếp Thị Mạng Xã Hội (UTM Marketing)
+              </h2>
+            </div>
+            <p className="text-xs text-[#7D5C5C]">
+              Dán các link mẫu này vào phần Tiểu sử (Bio) hoặc bài đăng trên mạng xã hội. Khi khách bấm vào mua hàng, hệ thống sẽ tự động ghi nhận nguồn đơn về đúng kênh:
+            </p>
+
+            <div className="divide-y divide-[#FFE8EF] border border-[#FFE8EF] rounded-2xl overflow-hidden text-xs">
+              {[
+                { channel: 'TikTok Bio', url: `${baseUrl}/?utm_source=tiktok`, color: 'bg-black text-white' },
+                { channel: 'Facebook / Messenger', url: `${baseUrl}/?utm_source=facebook`, color: 'bg-blue-600 text-white' },
+                { channel: 'Threads Bio', url: `${baseUrl}/?utm_source=threads`, color: 'bg-zinc-800 text-white' },
+                { channel: 'Instagram Bio', url: `${baseUrl}/?utm_source=instagram`, color: 'bg-gradient-to-tr from-yellow-500 to-pink-600 text-white' },
+                { channel: 'Zalo Chat', url: `${baseUrl}/?utm_source=zalo`, color: 'bg-blue-500 text-white' },
+              ].map((item, idx) => (
+                <div key={idx} className="p-3 bg-[#FFF9F6]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${item.color}`}>
+                      {item.channel}
+                    </span>
+                    <span className="font-mono text-[11px] text-[#5A3A3A] truncate max-w-xs sm:max-w-md">
+                      {item.url}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyLink(item.url, item.channel)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-[#FFE8EF] hover:border-[#F9739B] text-xs font-bold text-[#5A3A3A] transition-all self-end sm:self-auto"
+                  >
+                    {copiedChannel === item.channel ? (
+                      <>
+                        <Check size={13} className="text-green-600" />
+                        <span className="text-green-600">Đã chép</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        <span>Sao chép</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 

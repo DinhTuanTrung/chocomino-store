@@ -19,6 +19,7 @@ import {
   X,
   Trash2,
   Image as ImageIcon,
+  Copy,
 } from 'lucide-react';
 
 interface NewVariantForm {
@@ -151,6 +152,30 @@ export default function AdminProductsPage() {
     setFormVariants((prev) =>
       prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
     );
+  };
+
+  const handleCloneProduct = (prod: Product) => {
+    setNewProductName(`${prod.name} (Bản sao)`);
+    setNewProductCategoryId(prod.category_id || '');
+    setNewProductDesc(prod.description || '');
+    const primaryImg = prod.media?.find((m) => m.is_primary)?.url || prod.media?.[0]?.url || '';
+    setNewProductImage(primaryImg);
+    setNewProductIsFeatured(prod.is_featured);
+    if (prod.variants && prod.variants.length > 0) {
+      setFormVariants(
+        prod.variants.map((v) => ({
+          name: v.name,
+          sku: v.sku ? `${v.sku}-COPY` : '',
+          price: v.price,
+          comparePrice: v.compare_price,
+          stockQty: v.stock_qty,
+          weightKg: v.weight_kg,
+          status: v.status as any,
+          preorderEta: v.preorder_eta || '',
+        }))
+      );
+    }
+    setShowAddModal(true);
   };
 
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -331,15 +356,25 @@ export default function AdminProductsPage() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h2 className="font-title text-base font-bold text-[#5A3A3A] truncate">
-                          {prod.name}
-                        </h2>
-                        {prod.is_featured && (
-                          <span className="text-[10px] font-bold bg-[#FFE8EF] text-[#E24C7C] px-2 py-0.5 rounded-full">
-                            Nổi bật
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 truncate">
+                          <h2 className="font-title text-base font-bold text-[#5A3A3A] truncate">
+                            {prod.name}
+                          </h2>
+                          {prod.is_featured && (
+                            <span className="text-[10px] font-bold bg-[#FFE8EF] text-[#E24C7C] px-2 py-0.5 rounded-full">
+                              Nổi bật
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleCloneProduct(prod)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FFF9F6] border border-[#FFE8EF] hover:border-[#F9739B] hover:text-[#E24C7C] text-[#7D5C5C] text-xs font-bold transition-all shrink-0"
+                          title="Nhân bản mẫu sản phẩm này"
+                        >
+                          <Copy size={13} />
+                          <span>Nhân bản</span>
+                        </button>
                       </div>
                       <p className="text-[11px] text-[#A39A9A] line-clamp-1 mt-0.5">
                         {prod.description}

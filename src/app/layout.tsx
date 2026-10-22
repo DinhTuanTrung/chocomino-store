@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Baloo_2, Nunito } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { FloatingContact } from '@/components/FloatingContact';
 
 const baloo = Baloo_2({
   variable: '--font-baloo',
@@ -41,7 +42,10 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${baloo.variable} ${nunito.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-[#FFF9F6] text-[#5A3A3A] selection:bg-[#FFE8EF] selection:text-[#E24C7C]">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <FloatingContact />
+        </Providers>
       </body>
     </html>
   );

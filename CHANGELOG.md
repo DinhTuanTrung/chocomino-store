@@ -1,5 +1,20 @@
 # CHANGELOG — CHOCOMINO WEBSITE
 
+## [0.12.0] - 2026-10-22 (Bổ Sung Floating Multi-Channel Contact, Nhân Bản Sản Phẩm & Marketing UTM Links)
+
+### Added
+- **Nút Liên Hệ Đa Kênh Nổi Trên Toàn Hệ Thống (`FloatingContact.tsx` - FR-A-83)**:
+  - Tích hợp widget bong bóng nổi cố định góc phải màn hình cho khách hàng (`Zalo`, `Facebook Messenger`, `Hotline`).
+  - Hỗ trợ hiệu ứng ping animation gây chú ý, tối ưu tương thích di động (tự động dịch chuyển lên cao tránh che thanh Mua ngay ở trang chi tiết sản phẩm).
+  - Tự động ẩn trên màn hình Admin để không che các nút thao tác quản lý.
+- **Tính Năng Nhân Bản Sản Phẩm (`/admin/products` - FR-A-09)**:
+  - Bổ sung nút "Nhân bản" trực tiếp tại từng thẻ sản phẩm trong trang Quản lý sản phẩm.
+  - Tự động sao chép toàn bộ tên, mô tả, danh mục, hình ảnh đại diện, trạng thái nổi bật và toàn bộ danh sách biến thể (tự động gán mã SKU hậu tố `-COPY`) vào modal tạo mới.
+  - Giúp chủ shop tạo nhanh các mẫu squishy cùng bộ sưu tập hoặc tương tự mà không cần nhập lại từng biến thể thủ công.
+- **Bộ Công Cụ Tạo Link Tiếp Thị Mạng Xã Hội (`/admin/settings` - FR-A-81)**:
+  - Bổ sung bảng công cụ tạo và sao chép 1-click link chiến dịch UTM cho từng nền tảng: `TikTok Bio`, `Facebook/Messenger`, `Threads Bio`, `Instagram Bio`, `Zalo Chat`.
+  - Hỗ trợ lưu nguồn truy cập `utm_source` khi khách hàng đặt hàng để chủ shop đo lường hiệu quả quảng cáo.
+
 ## [0.11.0] - 2026-10-22 (Tối Giản Hóa File Xuất Excel SPX — Duy Nhất 1 Sheet Đơn Hàng)
 
 ### Enhanced
