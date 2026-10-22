@@ -42,16 +42,44 @@ export async function POST(req: NextRequest) {
     const updates = Object.keys(body).filter((k) => allowedKeys.includes(k));
 
     for (const key of updates) {
-      await supabase
+      // Try update first
+      const { data: updateRes, error: updateErr } = await supabase
         .from('settings')
-        .upsert(
-          {
-            key,
-            value: body[key],
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'key' }
-        );
+        .update({
+          value: body[key],
+          updated_at: new Date().toISOString(),
+        })
+        .eq('key', key)
+        .select();
+
+      if (updateErr) {
+        console.error(`[Settings Update Error] Key ${key}:`, updateErr);
+      }
+
+      // If key didn't update (e.g. didn't exist or blocked), try upsert
+      if (!updateRes || updateRes.length === 0) {
+        const { error: upsertErr } = await supabase
+          .from('settings')
+          .upsert(
+            {
+              key,
+              value: body[key],
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'key' }
+          );
+
+        if (upsertErr) {
+          console.error(`[Settings API Error] Key ${key}:`, upsertErr);
+          return NextResponse.json(
+            {
+              success: false,
+              message: `CSDL từ chối lưu mục "${key}": ${upsertErr.message}. Vui lòng kiểm tra quyền RLS của bảng settings trên Supabase!`,
+            },
+            { status: 500 }
+          );
+        }
+      }
     }
 
     // Record Audit Log (FR-A-62)

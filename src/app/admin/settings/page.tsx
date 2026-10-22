@@ -62,8 +62,8 @@ export default function AdminSettingsPage() {
     async function loadSettings() {
       try {
         const res = await fetch('/api/admin/settings');
-        const data = await res.json();
-        if (data.success && data.settings) {
+        const data = await res.json().catch(() => null);
+        if (data?.success && data?.settings) {
           const s = data.settings;
           if (s.shop_info) {
             if (s.shop_info.name) setShopName(s.shop_info.name);
@@ -79,13 +79,26 @@ export default function AdminSettingsPage() {
           }
           if (s.bank_account) {
             if (s.bank_account.bank_name) setBankName(s.bank_account.bank_name);
-            if (s.bank_account.account_number) setBankAccount(s.bank_account.account_number);
+            if (s.bank_account.account_number !== undefined && s.bank_account.account_number !== '') {
+              setBankAccount(s.bank_account.account_number);
+            }
             if (s.bank_account.account_holder) setAccountHolder(s.bank_account.account_holder);
             if (s.bank_account.qr_timeout_minutes) setQrTimeoutMinutes(Number(s.bank_account.qr_timeout_minutes));
           }
           if (s.spx_config) {
             if (s.spx_config.default_weight_kg) setSpxWeight(Number(s.spx_config.default_weight_kg));
             if (s.spx_config.payment_role) setSpxPayer(s.spx_config.payment_role);
+          }
+        } else if (typeof window !== 'undefined') {
+          // Fallback to local storage if API didn't return
+          const cached = localStorage.getItem('chocomino_shop_settings');
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              if (parsed.bank_account?.account_number) setBankAccount(parsed.bank_account.account_number);
+              if (parsed.bank_account?.bank_name) setBankName(parsed.bank_account.bank_name);
+              if (parsed.bank_account?.account_holder) setAccountHolder(parsed.bank_account.account_holder);
+            } catch (e) {}
           }
         }
       } catch (err) {
@@ -207,11 +220,13 @@ export default function AdminSettingsPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        throw new Error('Lỗi từ máy chủ khi lưu cấu hình');
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || 'Lỗi từ máy chủ khi lưu cấu hình');
       }
 
       if (typeof window !== 'undefined') {
+        localStorage.setItem('chocomino_shop_settings', JSON.stringify(payload));
         localStorage.setItem('chocomino_free_shipping_threshold', String(freeShipThreshold));
       }
 
