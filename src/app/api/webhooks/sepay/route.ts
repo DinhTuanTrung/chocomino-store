@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import {
-  verifySePayWebhookSignature,
-  extractOrderCodeFromTransferContent,
-} from '@/lib/sepay/vietqr';
+import { extractOrderCodeFromTransferContent } from '@/lib/sepay/vietqr';
+import { verifySePayWebhookSignature } from '@/lib/sepay/signature';
 import { recordAuditLog } from '@/lib/audit';
 import { sendTelegramPaymentSuccessNotification } from '@/lib/telegram';
 

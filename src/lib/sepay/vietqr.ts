@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 export interface VietQRParams {
   bankName?: string;
   accountNumber?: string;
@@ -23,20 +21,4 @@ export function extractOrderCodeFromTransferContent(content: string): string | n
   // Match 'CM' followed by 6 alphanumeric chars (e.g., CM7K2P9Q)
   const match = content.toUpperCase().match(/CM[A-Z0-9]{6}/);
   return match ? match[0] : null;
-}
-
-export function verifySePayWebhookSignature(
-  rawBody: string,
-  providedSignature: string | null,
-  secret: string
-): boolean {
-  if (!providedSignature || !secret) {
-    return false;
-  }
-  const hmac = crypto.createHmac('sha256', secret);
-  const calculatedSignature = hmac.update(rawBody).digest('hex');
-  return crypto.timingSafeEqual(
-    Buffer.from(calculatedSignature),
-    Buffer.from(providedSignature)
-  );
 }
