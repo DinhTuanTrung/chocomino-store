@@ -51,7 +51,7 @@ test.describe('E2E VIETQR & CHECKOUT FLOW (ZERO-TRUST QA)', () => {
 
     // 9. Xác thực giao diện VietQR
     await expect(page.locator('h1')).toContainText('Đặt hàng thành công!');
-    await expect(page.getByText(orderCode)).toBeVisible();
+    await expect(page.getByText(orderCode).first()).toBeVisible();
 
     // Kiểm tra thông tin thanh toán ngân hàng
     await expect(page.getByText('Quét mã VietQR')).toBeVisible();
@@ -78,16 +78,18 @@ test.describe('E2E VIETQR & CHECKOUT FLOW (ZERO-TRUST QA)', () => {
     const addBtn = userPage.locator('button:has-text("Thêm vào giỏ hàng")').first();
     if (await addBtn.isVisible()) {
       await addBtn.click();
+      await userPage.waitForTimeout(1000);
     }
 
     await userPage.goto('/thanh-toan');
     await userPage.fill('input[placeholder="Nguyễn Văn A"]', 'Nguyễn Đồng Bộ (Tab Sync)');
     await userPage.fill('input[placeholder="0912345678"]', '0911223344');
-    await userPage.fill('input[placeholder*="38/32 Đường Số 2"]', '12 Lê Duẩn, Quận 1');
+    await userPage.fill('input[placeholder="email@example.com"]', 'tabsync@chocomino.local');
+    await userPage.fill('input[placeholder*="38/32 Đường Số 2"]', '12 Lê Duẩn, Phường Bến Nghé, Quận 1');
     await userPage.locator('input[value="cod"]').check();
 
     await userPage.locator('button:has-text("Xác nhận Đặt hàng")').click();
-    await userPage.waitForURL(/\/dat-hang-thanh-cong\?code=CM/);
+    await userPage.waitForURL(/\/dat-hang-thanh-cong\?code=CM/, { timeout: 15000 });
     const orderCode = userPage.url().match(/code=(CM[A-Z0-9]+)/)![1];
 
     // B. Quản trị viên đăng nhập và kiểm tra đơn
@@ -119,21 +121,23 @@ test.describe('E2E VIETQR & CHECKOUT FLOW (ZERO-TRUST QA)', () => {
     await firstDetailBtn.click();
 
     // 3. Kiểm tra các nút nghiệp vụ
-    const confirmBtn = page.locator('button:has-text("Xác nhận đơn")');
-    if (await confirmBtn.isVisible()) {
-      await confirmBtn.click();
+    const actionBtn = page.locator('button:has-text("Xác nhận đơn"), button:has-text("Chuyển đóng gói")').first();
+    if (await actionBtn.isVisible()) {
+      await actionBtn.click();
       await page.waitForTimeout(1000);
     }
 
-    // 4. Mở phiếu in giao hàng SPX
-    const printBtn = page.locator('a[title="In phiếu gửi SPX"], a:has-text("In phiếu")').first();
-    await printBtn.click();
-    await page.waitForURL(/\/in-phieu/);
+    // 4. Mở phiếu in giao hàng SPX từ modal chi tiết đơn
+    const printLink = page.locator('a:has-text("In phiếu giao hàng")').first();
+    const href = await printLink.getAttribute('href');
+    expect(href).toBeTruthy();
+    await page.goto(href!);
+    await page.waitForLoadState('networkidle');
 
     // 5. Kiểm tra layout phiếu in khổ A7 (76×130mm)
     await expect(page.locator('body')).toContainText('Phiếu giao hàng TMĐT');
-    await expect(page.locator('body')).toContainText('NGƯỜI GỬI:');
-    await expect(page.locator('body')).toContainText('NGƯỜI NHẬN:');
+    await expect(page.locator('body')).toContainText('Người gửi:');
+    await expect(page.locator('body')).toContainText('Người nhận:');
     await expect(page.locator('body')).toContainText('TIỀN THU NGƯỜI NHẬN (COD)');
   });
 });

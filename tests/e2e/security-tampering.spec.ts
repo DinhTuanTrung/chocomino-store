@@ -41,31 +41,46 @@ test.describe('APPSEC & PENETRATION TESTING SUITE (ZERO-TRUST)', () => {
     }
   });
 
-  test('SEC-02: Chống Stored XSS trong thông tin khách hàng và memo đơn hàng', async ({ page }) => {
+  test('SEC-02: Chống Stored XSS trong thông tin khách hàng và memo đơn hàng', async ({ request, page }) => {
     const xssPayload = `<img src=x onerror="window.__xss_executed=true">`;
 
-    await page.goto('/san-pham/squishy-banh-mi-nuong-bo-mem-min-choco');
-    const addBtn = page.locator('button:has-text("Thêm vào giỏ hàng")').first();
-    if (await addBtn.isVisible()) {
-      await addBtn.click();
-    }
+    // 1. Tạo đơn hàng chứa payload XSS qua API Checkout
+    const res = await request.post('/api/checkout', {
+      data: {
+        items: [
+          {
+            productId: 'p1',
+            productName: 'Squishy Bánh Mì',
+            variantId: '0c57173b-eb63-4720-9a3b-cbb1b1c6053e',
+            variantName: 'Vị Socola',
+            quantity: 1,
+            price: 45000,
+          },
+        ],
+        customerName: xssPayload,
+        phone: '0987654321',
+        province: 'Thành phố Hồ Chí Minh',
+        ward: 'Phường Bến Nghé',
+        addressDetail: 'Địa chỉ Test XSS',
+        paymentMethod: 'cod',
+      },
+    });
 
-    await page.goto('/thanh-toan');
-    await page.fill('input[placeholder="Nguyễn Văn A"]', xssPayload);
-    await page.fill('input[placeholder="0912345678"]', '0999888777');
-    await page.fill('input[placeholder*="38/32 Đường Số 2"]', 'Địa chỉ Test XSS');
-    await page.locator('input[value="cod"]').check();
+    const data = await res.json();
+    expect(res.ok()).toBeTruthy();
+    expect(data.success).toBeTruthy();
+    const orderCode = data.order.code;
 
-    await page.locator('button:has-text("Xác nhận Đặt hàng")').click();
-    await page.waitForURL(/\/dat-hang-thanh-cong\?code=CM/);
+    // 2. Mở trang đơn hàng thành công trên trình duyệt
+    await page.goto(`/dat-hang-thanh-cong?code=${orderCode}&pm=cod`);
 
-    // Xác thực biến __xss_executed không bao giờ được kích hoạt
+    // 3. Xác thực script XSS không bao giờ được thực thi
     const isXssTriggered = await page.evaluate(() => (window as any).__xss_executed === true);
     expect(isXssTriggered).toBeFalsy();
 
-    // Xác thực text hiển thị được escape an toàn
-    const content = await page.content();
-    expect(content).not.toContain('<img src=x onerror=');
+    // 4. Xác thực HTML được escape an toàn (dưới dạng text node hoặc encoded string)
+    const rawHtml = await page.content();
+    expect(rawHtml).not.toContain('<img src=x onerror=');
   });
 
   test('SEC-03: Bảo vệ phân hệ Admin (Authentication Bypass Prevention)', async ({ browser }) => {
